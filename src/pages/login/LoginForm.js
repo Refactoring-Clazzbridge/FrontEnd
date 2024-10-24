@@ -46,6 +46,9 @@ function LoginForm({ onLoginSuccess }) {
 
         setUserInfo({ member });
         localStorage.setItem("userInfo", JSON.stringify({ member })); // 로컬 스토리지에 저장
+        localStorage.setItem("userId", member.id); // 로컬 스토리지에 저장
+        localStorage.setItem("membertype", member.memberType); // 로컬 스토리지에 저장
+
 
         console.log(
           "response.data.refreshToken: " + response.data.refreshTokenCookie
