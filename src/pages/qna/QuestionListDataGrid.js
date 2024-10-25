@@ -129,6 +129,15 @@ export default function QuestionBoard() {
   }, [fetchQuestions]);
 
   useEffect(() => {
+    const memberId = localStorage.getItem("memberId");
+    if (!memberId) {
+      console.warn("memberId가 localStorage에 없습니다.");
+    } else {
+      console.log("localStorage에서 가져온 memberId:", memberId);
+    }
+  }, []);
+
+  useEffect(() => {
     if (selectedRow?.id) {
       fetchAnswers(selectedRow.id);
     }
