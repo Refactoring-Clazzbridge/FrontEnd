@@ -168,7 +168,7 @@ const TopBar = ({ open }) => {
     }
 
     // 좌석 정보를 localStorage에서 삭제
-    localStorage.removeItem("userHasSeat");
+    // localStorage.removeItem("userHasSeat");
 
     // 기존 로그아웃 프로세스 진행
     localStorage.removeItem("token");
@@ -266,7 +266,7 @@ const TopBar = ({ open }) => {
       open={open}
       sx={{
         boxShadow: "none",
-        display: "flex", 
+        display: "flex",
         justifyContent: "space-between",
       }}
     >
