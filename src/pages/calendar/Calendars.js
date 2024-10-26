@@ -47,10 +47,47 @@ const Calendars = () => {
   const [events, setEvents] = useState([]);
   const [courseOptions, setcourseOptions] = useState([]); // 강의 옵션 상태
 
+  // role 상태
+  const [role, setType] = useState("");
+
+  // course 상태
+  const [course, setCourse] = useState("");
+
   useEffect(() => {
     // 페이지가 처음 로드될 때 API에서 데이터를 가져옵니다.
     fetchEvents();
     fetchcourses();
+    const fetchRole = async () => {
+      try {
+        const token = localStorage.getItem('token'); // localStorage에서 token 가져오기
+        const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+        if (!token) {
+          console.log('No token found in localStorage');
+          return;
+        }
+        // API 요청 보내기
+        const role = localStorage.getItem('membertype');
+
+        if (role !== "ROLE_ADMIN") {
+
+          apiClient.get(`user/check/${userInfo.member.id}`)
+            .then(response => {
+              setCourse(response.data); // 강의 목록 설정
+              console.log(response.data);
+            })
+            .catch(error => {
+              console.error('강의 목록을 불러오지 못했습니다.', error);
+            });
+        }
+
+
+        setType(role); // 받은 role을 상태로 저장
+      } catch (error) {
+        console.error('Error fetching role:', error);
+      }
+    };
+
+    fetchRole();
   }, []); // 빈 배열로 처음에 한 번만 실행
 
   const fetchEvents = () => {
@@ -204,17 +241,31 @@ const Calendars = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterMoment}>
-      <div style={{ height: '80vh' }}>
-        <Button variant="outlined" color="secondary" onClick={handleAddEvent} style={{ marginBottom: '10px' }}>
-          일정 추가
-        </Button>
 
+      <div style={{ height: '80vh' }}>
+        {role === "ROLE_ADMIN" ?
+          <Button variant="outlined" color="secondary" onClick={handleAddEvent} style={{ marginBottom: '10px' }}>
+            일정 추가
+          </Button>
+          : ""}
         <Calendar
           localizer={localizer}
-          events={events.map(event => ({
-            ...event,
-            title: event.eventTitle,
-          }))}
+          events={events
+            .filter(event => {
+              // 권한에 맞는 일정을 필터링
+              // 예: 사용자 권한이 'admin'인 경우 모든 이벤트를 보여주고, 
+              // 권한이 'user'인 경우 특정 조건을 만족하는 이벤트만 보여주기
+              if (role === 'ROLE_ADMIN') {
+                return true;  // 'admin' 권한은 모든 일정 보여줌
+              } else if (role === 'ROLE_STUDENT' || role === 'ROLE_TEACHER') {
+                return event.courseTitle === course || event.courseTitle === "전체 일정";
+              }
+              return false;  // 기본적으로 권한이 없으면 이벤트를 안 보여줌
+            })
+            .map(event => ({
+              ...event,
+              title: event.eventTitle,
+            }))}
           startAccessor="start"
           endAccessor="end"
           style={{ height: '100%' }}
@@ -252,6 +303,7 @@ const Calendars = () => {
                     value={newEventcourseTitle}
                     onChange={(e) => setNewEventcourseTitle(e.target.value)}
                   >
+                    <MenuItem value="전체 일정">전체 일정</MenuItem>
                     {courseOptions.map((course, index) => (
                       <MenuItem key={index} value={course.courseTitle}>
                         {course.courseTitle}
@@ -327,35 +379,36 @@ const Calendars = () => {
                   종료 시간: {selectedEvent ? moment(selectedEvent.end).format('YYYY.MM.DD HH:mm') : ''}
                 </Typography>
 
-                <div style={{ marginTop: '20px' }}>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleEditEvent}
-                    style={{ marginRight: '10px' }}
-                  >
-                    변경
-                  </Button>
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    onClick={handleDeleteEvent}
-                  >
-                    삭제
-                  </Button>
-                </div>
+                {role === "ROLE_ADMIN" ?
+                  <div style={{ marginTop: '20px' }}>
+                    <Button
+                      variant="outlined"
+                      onClick={handleEditEvent}
+                      style={{ marginRight: '10px' }}
+                    >
+                      변경
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={handleDeleteEvent}
+                    >
+                      삭제
+                    </Button>
+                  </div>
+                  : ""}
               </>
             )}
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
               {editMode && (
-                <Button onClick={handleSaveEvent} color="primary" variant="contained" sx={{ mr: 1 }}>
+                <Button onClick={handleSaveEvent} variant="outlined" sx={{ mr: 1 }}>
                   저장
                 </Button>
               )}
-              <Button onClick={handleClose} color="secondary" variant="contained">
+              <Button onClick={handleClose} variant="outlined">
                 닫기
               </Button>
             </Box>
+
           </div>
         </Modal>
       </div>

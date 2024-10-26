@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; // 추가
-import { jwtDecode } from 'jwt-decode'; // named export로 임포트
 import {
     TextField,
     Button,
@@ -20,14 +19,12 @@ const PasswordCheck = () => {
     const navigate = useNavigate(); // 추가
     useEffect(() => {
         const token = localStorage.getItem('token');
-        console.log("=================> 프로필 확인", token)
+        const userInfo = JSON.parse(localStorage.getItem('userInfo'));
         if (token) {
             try {
-                const decodedToken = jwtDecode(token); // jwtDecode 사용
-                const userId = decodedToken.id; // userId 추출
+                const userId = userInfo.member.id; // userId 추출
                 setUserId(userId);
-                console.log("토큰 디코더", decodedToken)
-                console.log("id 추출", userId)
+
                 apiClient.get(`userlist/${userId}`)
                     .then(response => {
 

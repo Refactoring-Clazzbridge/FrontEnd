@@ -27,6 +27,7 @@
     "react-grid-layout": "^1.4.4",
     "react-router-dom": "^6.26.2",
     "react-scripts": "5.0.1",
+    "react-syntax-highlighter": "^15.6.1",
     "styled-components": "^6.1.13",
     "web-vitals": "^2.1.4"
   },

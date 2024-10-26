@@ -22,14 +22,13 @@ import CreateOutlinedIcon from "@mui/icons-material/CreateOutlined";
 import PollOutlinedIcon from "@mui/icons-material/PollOutlined";
 import ContactSupportOutlinedIcon from "@mui/icons-material/ContactSupportOutlined";
 import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
-import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
-import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
-import EventSeatOutlinedIcon from '@mui/icons-material/EventSeatOutlined';
-import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
+import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
+import SchoolOutlinedIcon from "@mui/icons-material/SchoolOutlined";
+import EventSeatOutlinedIcon from "@mui/icons-material/EventSeatOutlined";
+import AccountTreeOutlinedIcon from "@mui/icons-material/AccountTreeOutlined";
 import apiClient from "../../shared/apiClient";
 import { jwtDecode } from "jwt-decode";
 import { useState } from "react";
-
 
 export const drawerWidth = 240;
 const closedDrawerWidth = 64;
@@ -42,9 +41,9 @@ const SideBar = ({ open, handleDrawerToggle }) => {
   useEffect(() => {
     const fetchRole = async () => {
       try {
-        const token = localStorage.getItem('token'); // localStorage에서 token 가져오기
+        const token = localStorage.getItem("token"); // localStorage에서 token 가져오기
         if (!token) {
-          console.log('No token found in localStorage');
+          console.log("No token found in localStorage");
           return;
         }
 
@@ -57,7 +56,7 @@ const SideBar = ({ open, handleDrawerToggle }) => {
 
         setType(response.data); // 받은 role을 상태로 저장
       } catch (error) {
-        console.error('Error fetching role:', error);
+        console.error("Error fetching role:", error);
       }
     };
 
@@ -73,7 +72,7 @@ const SideBar = ({ open, handleDrawerToggle }) => {
     {
       title: "캘린더",
       icon: <CalendarMonthOutlinedIcon />,
-      link: "/calendar"
+      link: "/calendar",
     },
     {
       title: "게시판",
@@ -152,13 +151,12 @@ const SideBar = ({ open, handleDrawerToggle }) => {
           notifications: 4,
           icon: <PeopleAltOutlinedIcon />,
           link: "/memberManager",
-
         },
         {
           title: "강의관리",
           notifications: 4,
           icon: <SchoolOutlinedIcon />,
-          link: "/memberManager",
+          link: "/courseManager",
         },
         {
           title: "강의실관리",
@@ -169,7 +167,6 @@ const SideBar = ({ open, handleDrawerToggle }) => {
       ],
     });
   }
-
 
   const StyledListItemButton = styled(ListItemButton)({
     "&.Mui-selected": {
@@ -261,7 +258,6 @@ const SideBar = ({ open, handleDrawerToggle }) => {
     margin: "auto", // 가운데 정렬
   }));
 
-
   return (
     <Box sx={{ display: "flex" }}>
       <MenuButtonContainer>
@@ -291,11 +287,11 @@ const SideBar = ({ open, handleDrawerToggle }) => {
                   },
                   open
                     ? {
-                      justifyContent: "initial",
-                    }
+                        justifyContent: "initial",
+                      }
                     : {
-                      justifyContent: "center",
-                    },
+                        justifyContent: "center",
+                      },
                 ]}
               >
                 <ListItemIcon
@@ -306,12 +302,12 @@ const SideBar = ({ open, handleDrawerToggle }) => {
                     },
                     open
                       ? {
-                        mr: 3,
-                        display: "none",
-                      }
+                          mr: 3,
+                          display: "none",
+                        }
                       : {
-                        mr: "auto",
-                      },
+                          mr: "auto",
+                        },
                   ]}
                 >
                   <Box
@@ -348,11 +344,11 @@ const SideBar = ({ open, handleDrawerToggle }) => {
                   sx={[
                     open
                       ? {
-                        opacity: 1,
-                      }
+                          opacity: 1,
+                        }
                       : {
-                        opacity: 0,
-                      },
+                          opacity: 0,
+                        },
                   ]}
                 />
               </StyledListItemButton>
@@ -388,14 +384,14 @@ const SideBar = ({ open, handleDrawerToggle }) => {
                       sx={[
                         open
                           ? {
-                            display: "flex",
-                            marginLeft: "-10px",
-                            marginTop: 0,
-                            marginBottom: 0,
-                          }
+                              display: "flex",
+                              marginLeft: "-10px",
+                              marginTop: 0,
+                              marginBottom: 0,
+                            }
                           : {
-                            display: "none",
-                          },
+                              display: "none",
+                            },
                       ]}
                     />
                   </StyledListItemButton>

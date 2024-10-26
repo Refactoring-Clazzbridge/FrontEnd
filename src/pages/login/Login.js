@@ -39,10 +39,12 @@ function Login() {
           setIsLoggedIn(true);
         } catch (error) {
           console.error("Refresh token failed:", error);
-          handleLogout();
+
+          console.log("1=======> 로그인 페이지로");
           navigate("/"); // 로그인 페이지로 리다이렉트
         }
       } else {
+        console.log("2=======> 로그인 페이지로");
         navigate("/"); // 로그인 페이지로 리다이렉트
       }
     };
@@ -72,16 +74,11 @@ function Login() {
   };
 
   const handleLoginSuccess = () => {
+    console.log("로그인");
     setIsLoggedIn(true);
   };
 
-  const handleLogout = () => {
-    console.log("=================logout");
-    setIsLoggedIn(false);
-    localStorage.removeItem("token");
-    Cookies.remove("refreshToken");
-    navigate("/login"); // 로그인 페이지로 리다이렉트
-  };
+
 
   if (isLoading) {
     return <Typography>Loading...</Typography>; // 로딩 중 메시지

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { jwtDecode } from "jwt-decode"; // named export로 임포트
+import React, { useContext, useState, useEffect } from "react";
 import apiClient from "../../shared/apiClient";
+import { UserContext } from "../../context/UserContext";
 
 import {
   Button,
@@ -36,17 +36,17 @@ const ProfileForm = () => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { setUserInfo } = useContext(UserContext);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     console.log("=================> 프로필 확인", token);
+    const userInfo = JSON.parse(localStorage.getItem('userInfo'));
     if (token) {
       try {
-        const decodedToken = jwtDecode(token); // jwtDecode 사용
-        const userId = decodedToken.id; // userId 추출
 
-        console.log("토큰 디코더", decodedToken);
-        console.log("id 추출", userId);
+        const userId = userInfo.member.id; // userId 추출
+
         apiClient
           .get(`userlist/${userId}`)
           .then((response) => {
@@ -117,11 +117,34 @@ const ProfileForm = () => {
       .put("userlist", profile)
       .then((response) => {
         alert("변경되었습니다.");
+        handleSubmit2();
       })
       .catch((error) => {
         console.error("변경에 실패하였습니다.", error);
       });
+
+
+
   };
+
+  const handleSubmit2 = (e) => {
+    apiClient.post("userlist/update", {
+      memberId: profile.memberId,
+      password: profile.password,
+    })
+      .then((response) => {
+        const { authResponseDTO: member } = response.data;
+        setUserInfo({ member });
+        localStorage.setItem("userInfo", JSON.stringify({ member })); // 로컬 스토리지에 저장
+        localStorage.setItem("userId", member.id); // 로컬 스토리지에 저장
+        localStorage.setItem("membertype", member.memberType); // 로컬 스토리지에 저장
+
+      })
+      .catch((error) => {
+        console.error("Update failed:", error);
+      });
+  }
+
 
   return (
     <Container component="main" maxWidth="lg" sx={{ mt: 4 }}>

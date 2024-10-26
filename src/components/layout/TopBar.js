@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { styled } from "@mui/material/styles";
 import MuiAppBar from "@mui/material/AppBar";
@@ -10,16 +10,25 @@ import Menu from "@mui/material/Menu";
 import MenuIcon from "@mui/icons-material/Menu";
 import AccountCircle from "@mui/icons-material/AccountCircle";
 import NotificationsNoneOutlinedIcon from "@mui/icons-material/NotificationsNoneOutlined";
-import { Box, IconButton } from "@mui/material";
+import {
+  Box,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Button,
+} from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import Avatar from "@mui/material/Avatar";
-import profileImage4 from "../../assets/images/image4.jpeg";
 import Cookies from "js-cookie";
 import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
 import Stack from "@mui/material/Stack";
 import Tooltip, { tooltipClasses } from "@mui/material/Tooltip";
 import { GitHub } from "@mui/icons-material";
 import { UserContext } from "../../context/UserContext";
+import apiClient from "../../shared/apiClient"; // default로 가져오기
 
 const drawerWidth = 240;
 const closedDrawerWidth = 64; // 슬라이드바가 닫혔을 때의 넓이
@@ -115,8 +124,9 @@ const TopBar = ({ open }) => {
     },
   }));
 
-  const [anchorEl, setAnchorEl] = React.useState(null);
-  const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = React.useState(null);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = useState(null);
+  const [isNotificationOpen, setNotificationOpen] = useState(false);
 
   const isMenuOpen = Boolean(anchorEl);
   const isMobileMenuOpen = Boolean(mobileMoreAnchorEl);
@@ -140,9 +150,11 @@ const TopBar = ({ open }) => {
   };
 
   const handleGitHubClick = () => {
-    // const githubUrl = userInfo.member.githubUrl; // 유저 데이터에서 깃허브 URL 가져오기
+    localStorage.getItem("userInfo");
+    const githubUrl = userInfo.member.gitUrl; // 유저 데이터에서 깃허브 URL 가져오기
     // window.open(githubUrl, "_blank");
-    window.open("https://github.com/", "_blank");
+    console.log(githubUrl);
+    window.open(githubUrl);
   };
 
   const handleProfileClick = () => {
@@ -150,15 +162,41 @@ const TopBar = ({ open }) => {
     navigate("/PasswordCheck");
   };
 
-  const handleLogoutClick = () => {
+  const handleLogoutClick = async () => {
+    if (!userInfo || !userInfo.member || !userInfo.member.id) {
+      console.error("Member ID is missing or invalid.");
+      return;
+    }
+
+    const memberId = userInfo.member.id.toString(); // Long 타입의 고유 ID를 String으로 변환
+
+    // 좌석 상태를 오프라인으로 업데이트하는 요청 보내기
+    try {
+      await apiClient.post("/logout", { memberId });
+      console.log("좌석 상태를 오프라인으로 업데이트 완료");
+    } catch (error) {
+      console.error("좌석 상태 업데이트 중 오류 발생:", error);
+    }
+
+    // 좌석 정보를 localStorage에서 삭제
+    // localStorage.removeItem("userHasSeat");
+
+    // 기존 로그아웃 프로세스 진행
     localStorage.removeItem("token");
+    localStorage.removeItem("userInfo");
     Cookies.remove("refreshToken");
-    console.log("토큰 제거 ", localStorage.getItem("token"));
+    console.log("토큰 제거 완료", localStorage.getItem("token"));
+
+    // 페이지를 새로 고치거나 로그인 화면으로 이동
     window.location.reload();
   };
 
   const handleNotificationClick = () => {
-    alert("알림");
+    setNotificationOpen(true); // 알림창 열기
+  };
+
+  const handleNotificationClose = () => {
+    setNotificationOpen(false); // 알림창 닫기
   };
 
   const menuId = "primary-search-account-menu";
@@ -250,7 +288,9 @@ const TopBar = ({ open }) => {
     >
       <Toolbar
         sx={{
-          backgroundColor: "#f6f8fa",
+          // backgroundColor: "#f6f8fa",
+          backgroundColor: "white",
+          borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
           color: "black",
           justifyContent: "space-between",
         }}
@@ -306,7 +346,7 @@ const TopBar = ({ open }) => {
             >
               <LightTooltip title="내 정보">
                 <Avatar
-                  src={profileImage4}
+                  src={userInfo.member.profileImageUrl}
                   sx={{ width: "40px", height: "40px", marginLeft: "8px" }}
                 />
               </LightTooltip>
@@ -328,6 +368,15 @@ const TopBar = ({ open }) => {
         </Box>
       </Toolbar>
       {renderMobileMenu}
+      <Dialog open={isNotificationOpen} onClose={handleNotificationClose}>
+        <DialogTitle>알림</DialogTitle>
+        <DialogContent>
+          <DialogContentText>여기에 알림 내용을 표시합니다.</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleNotificationClose}>닫기</Button>
+        </DialogActions>
+      </Dialog>
       {renderMenu}
     </AppBar>
   );

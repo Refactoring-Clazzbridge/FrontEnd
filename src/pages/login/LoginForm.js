@@ -11,12 +11,15 @@ import {
   Typography,
 } from "@mui/material";
 import { UserContext } from "../../context/UserContext";
+import apiClient from "../../shared/apiClient"; // default로 가져오기
 
 function LoginForm({ onLoginSuccess }) {
   const [memberId, setmemberId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isSeatRegistered, setIsSeatRegistered] = useState(false); // 좌석 등록 여부 상태
+  const [seatData, setSeatData] = useState(null); // 좌석 정보 상태
   const { setUserInfo } = useContext(UserContext);
 
   const minLength = 8;
@@ -46,11 +49,16 @@ function LoginForm({ onLoginSuccess }) {
 
         setUserInfo({ member });
         localStorage.setItem("userInfo", JSON.stringify({ member })); // 로컬 스토리지에 저장
+        localStorage.setItem("userId", member.id); // 로컬 스토리지에 저장
+        localStorage.setItem("membertype", member.memberType); // 로컬 스토리지에 저장
+
 
         console.log(
           "response.data.refreshToken: " + response.data.refreshTokenCookie
         );
         document.cookie = `refreshToken=${response.data.refreshTokenCookie.value}; path=/;`;
+
+        await fetchSeatInfo(memberId); // 로그인 성공 후 좌석 정보를 가져오는 로직 추가
 
         onLoginSuccess(memberId);
         setError("");
@@ -62,6 +70,29 @@ function LoginForm({ onLoginSuccess }) {
       setError("아이디 또는 비밀번호가 올바르지 않습니다.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 좌석 정보를 서버에서 가져오는 함수
+  const fetchSeatInfo = async (memberId) => {
+    try {
+      const seatResponse = await apiClient.get(`/seat/status/${memberId}`);
+
+      if (seatResponse.data) {
+        const seatInfo = seatResponse.data;
+        console.log("좌석 정보 가져오기 성공:", seatInfo);
+
+        localStorage.setItem("seatInfo", JSON.stringify(seatInfo));
+
+        // 좌석이 등록된 상태로 업데이트
+        setIsSeatRegistered(true);  // 좌석이 등록되었다고 설정
+        setSeatData(seatInfo);      // 좌석 정보 저장
+      } else {
+        setIsSeatRegistered(false); // 좌석 정보가 없으면 미등록 상태로 설정
+        console.log("좌석 정보가 없습니다.");
+      }
+    } catch (error) {
+      console.error("좌석 정보를 가져오는 중 오류 발생:", error);
     }
   };
 

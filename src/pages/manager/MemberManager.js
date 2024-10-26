@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Button, Modal, Typography, TextField, Box, FormControl, InputLabel, Select, MenuItem, Checkbox, Table, TableBody, TableCell, TableHead, TableRow, IconButton, Radio, RadioGroup, FormControlLabel } from "@mui/material";
+import { Button, Modal, Typography, TextField, Box, FormControl, InputLabel, Select, MenuItem, IconButton, Radio, RadioGroup, FormControlLabel } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import apiClient from '../../shared/apiClient';
+import { DataGrid } from '@mui/x-data-grid'; // DataGrid 임포트
+import { v4 as uuidv4 } from 'uuid'; // 고유한 ID를 생성하기 위해 uuid 패키지 사용
 
 const MemberManager = () => {
     const [open, setOpen] = useState(false);
@@ -123,7 +125,11 @@ const MemberManager = () => {
     const addMember = (newMember) => {
         apiClient.post('user', newMember) // ID 없이 회원 추가
             .then(response => {
-                setEvents([...events, response.data]); // 응답으로 받은 새 회원 추가
+                const addedCourse = {
+                    ...response.data,
+                    id: response.data.id || uuidv4(), // 서버가 `id`를 주지 않으면 클라이언트에서 임시로 생성
+                };
+                setEvents([...events, addedCourse]);// 응답으로 받은 새 회원 추가
                 alert('회원이 추가되었습니다.');
                 handleClose();
                 fetchEvents(); // 추가 후 이벤트 목록 새로 고침
@@ -271,73 +277,151 @@ const MemberManager = () => {
         }
     };
 
-    // 체크박스 선택/해제 핸들러
-    const handleSelectMember = (memberId) => {
-        setSelectedMembers((prevSelected) =>
-            prevSelected.includes(memberId)
-                ? prevSelected.filter(id => id !== memberId) // 선택 해제
-                : [...prevSelected, memberId] // 선택 추가
-        );
-    };
-
     // 비밀번호 가리기/보이기 토글 핸들러
     const togglePasswordVisibility = () => {
         setShowPassword(!showPassword);
     };
 
-    const getMemberType = (role) => {
-        if (role === 'ROLE_STUDENT') return '수강생';
-        if (role === 'ROLE_TEACHER') return '강사';
-        return role; // 다른 역할이 있을 경우 그대로 출력
-    };
+
 
     return (
         <div>
             {/* 회원 리스트 테이블 */}
-            <Table>
-                <TableHead>
-                    <TableRow>
-                        <TableCell>선택</TableCell>
-                        <TableCell>번호</TableCell>
-                        <TableCell>회원종류</TableCell>
-                        <TableCell>이름</TableCell>
-                        <TableCell>아이디</TableCell>
-                        <TableCell>전화번호</TableCell>
-                        <TableCell>이메일</TableCell>
-                        <TableCell>강의명</TableCell>
-                    </TableRow>
-                </TableHead>
-                <TableBody>
-                    {events.map((event, index) => (
-                        <TableRow key={index}>
-                            <TableCell sx={{ paddingLeft: '8px' }}>
-                                <Checkbox
-                                    checked={selectedMembers.includes(event.id)}
-                                    onChange={() => handleSelectMember(event.id)}
-                                    sx={{ m1: -10 }}
-                                />
-                            </TableCell>
-                            <TableCell>{event.id}</TableCell>
-                            <TableCell>{getMemberType(event.memberType)}</TableCell>
-                            <TableCell>{event.name}</TableCell>
-                            <TableCell>{event.memberId}</TableCell>
-                            <TableCell>{event.phone}</TableCell>
-                            <TableCell>{event.email}</TableCell>
-                            <TableCell>{event.courseTitle}</TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
+
+            <Box sx={{ height: 650, width: '100%' }}>
+                <DataGrid
+                    sx={{
+                        backgroundColor: "white", // 배경색
+                        border: "none", // 테두리
+                        "--DataGrid-rowBorderColor": "transparent",
+                        "& .MuiDataGrid-cell": {
+                            border: "none",
+                        },
+                        "& .MuiDataGrid-row": {
+                            borderBottom: "1px solid #f6f8fa",
+                        },
+                        "& .MuiDataGrid-filler": {
+                            display: "none",
+                        },
+                        "& .MuiDataGrid-footerContainer": {
+                            border: "none",
+                        },
+                        "& .MuiDataGrid-columnHeaderTitleContainer": {
+                            fontSize: "12px",
+                            fontWeight: "bold",
+                            color: "#222831",
+                        },
+                        "& .MuiDataGrid-columnSeparator--sideRight": {
+                            display: "none",
+                        },
+                        "& .MuiDataGrid-columnHeader": {
+                            color: "black", // 헤더 글자색
+                            border: "none",
+                        },
+                    }}
+                    localeText={{
+                        // 선택된 행 수 텍스트 변경
+                        footerRowSelected: (count) => `${count}개 선택됨`, // 예: "11개 선택됨"
+                        // 필터 관련 텍스트 변경
+                        filterOperatorContains: "포함",
+                        filterOperatorEquals: "같음",
+                        filterOperatorStartsWith: "시작함",
+                        filterOperatorEndsWith: "끝남",
+                        filterOperatorIs: "이것",
+                        filterOperatorDoesNotContain: "포함하지 않음",
+                        filterOperatorDoesNotEqual: "같지 않음",
+                        filterOperatorIsAnyOf: "다음 중 하나",
+                        filterOperatorNot: "아니오",
+                        filterOperatorAfter: "이후",
+                        filterOperatorBefore: "이전",
+                        filterOperatorIsEmpty: "비어 있음",
+                        filterOperatorIsNotEmpty: "비어 있지 않음",
+
+                        // 필터 메뉴 텍스트
+                        filterPanelInputLabel: "필터",
+                        filterPanelAddFilter: "필터 추가",
+                        filterPanelDeleteIconLabel: "삭제",
+                        filterPanelOperator: "연산자",
+                        filterPanelColumns: "데이터 열",
+                        filterPanelValue: "값",
+                        filterPanelOperatorAnd: "그리고",
+                        filterPanelOperatorOr: "또는",
+                        sortAscending: "오름차순 정렬",
+                        sortDescending: "내림차순 정렬",
+                        columnMenuSortAsc: "오름차순 정렬", // "Sort Ascending" 텍스트 변경
+                        columnMenuSortDesc: "내림차순 정렬", // "Sort Descending" 텍스트 변경
+                        columnMenuShowAll: "모두 표시", // "Show All" 텍스트 변경
+                        columnMenuFilter: "필터", // "Filter" 텍스트 변경
+                        columnMenuUnsort: "정렬 해제", // "Unsort" 텍스트 변경
+                        columnMenuHideColumn: "숨기기", // "Hide" 텍스트 변경
+                        columnMenuHideOn: "숨기기", // "Hide on" 텍스트 변경
+                        columnMenuManageColumns: "관리", // "Manage" 텍스트 변경
+                        // 페이지 관련 텍스트 변경
+                        page: "페이지",
+                        noRowsLabel: "데이터가 없습니다.",
+                        noResultsOverlayLabel: "결과가 없습니다.",
+                        errorOverlayDefaultLabel: "오류가 발생했습니다.",
+                        // 페이지네이션 관련 텍스트
+                        pageSize: "페이지 크기",
+                        pageSizeOptions: ["5", "10", "20"],
+                    }}
+                    rows={events} // 데이터
+
+
+                    columns={[
+
+                        { field: 'id', headerName: '번호', flex: 0.5 },
+                        {
+                            field: 'memberType', headerName: '회원종류', flex: 1,
+                            valueGetter: (events) => {
+                                switch (events) {
+                                    case 'ROLE_TEACHER':
+                                        return '강사';
+                                    default:
+                                        //console.log(events);
+                                        return '수강생';
+
+                                }
+                            }
+
+                        },
+                        { field: 'name', headerName: '이름', flex: 1 },
+                        { field: 'memberId', headerName: '아이디', flex: 1 },
+                        { field: 'phone', headerName: '전화번호', flex: 1.3 },
+                        { field: 'email', headerName: '이메일', flex: 1.3 },
+                        { field: 'courseTitle', headerName: '강의명', flex: 1.5, ml: 30 },
+                    ]}
+                    initialState={{
+                        pagination: {
+                            paginationModel: {
+                                pageSize: 10,
+                            },
+                        },
+                    }}
+                    pageSizeOptions={[10]}
+                    checkboxSelection // 행 선택을 위한 체크박스 추가
+                    onRowSelectionModelChange={(newSelection) => {
+                        setSelectedMembers(newSelection); // 상태 업데이트
+
+                    }}
+
+                    selectionModel={selectedMembers} // 선택된 ID 목록
+                />
+            </Box>
+
+
+
+
 
             {/* 등록, 수정, 삭제 버튼 */}
             <Box mt={2} sx={{ display: "flex", justifyContent: "flex-end" }}>
-                <Button variant="contained" color="primary" onClick={handleOpen} sx={{ mr: 2 }}>
+                <Button variant="outlined" onClick={handleOpen} sx={{ mr: 2 }}>
                     회원 등록
                 </Button>
-                <Button variant="contained" color="secondary" onClick={editSelectedMember} sx={{ mr: 2 }}>
+                <Button variant="outlined" onClick={editSelectedMember} sx={{ mr: 2 }}>
                     회원 수정
                 </Button>
-                <Button variant="contained" color="error" onClick={deleteSelectedMembers}>
+                <Button variant="outlined" onClick={deleteSelectedMembers}>
                     회원 삭제
                 </Button>
             </Box>
@@ -488,10 +572,10 @@ const MemberManager = () => {
 
                     {/* 저장 및 취소 버튼 */}
                     <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 3 }}>
-                        <Button variant="contained" color="primary" onClick={handleSaveEvent}>
+                        <Button variant="outlined" onClick={handleSaveEvent}>
                             저장
                         </Button>
-                        <Button variant="contained" color="secondary" onClick={handleClose} sx={{ ml: 2 }}>
+                        <Button variant="outlined" onClick={handleClose} sx={{ ml: 2 }}>
                             취소
                         </Button>
                     </Box>
