@@ -1,5 +1,5 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 
-export default function Assignment() {
-  return <div>과제</div>;
+export default function AssignmentAccordion() {
+  return <></>;
 }

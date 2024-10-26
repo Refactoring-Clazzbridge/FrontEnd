@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Button, Modal, Typography, TextField, Box, FormControl, Checkbox, Table, TableBody, TableCell, TableHead, TableRow, Radio, RadioGroup, FormControlLabel } from "@mui/material";
+import { Button, Modal, Typography, TextField, Box } from "@mui/material";
+import { DataGrid } from '@mui/x-data-grid'; // DataGrid 임포트
 import apiClient from '../../shared/apiClient';
+import { v4 as uuidv4 } from 'uuid'; // 고유한 ID를 생성하기 위해 uuid 패키지 사용
 
 const ClassroomManager = () => {
     const [open, setOpen] = useState(false);
@@ -28,28 +30,14 @@ const ClassroomManager = () => {
             .then(response => {
                 const fetchedEvents = response.data.map(event => ({
                     ...event,
+                    isOccupied: event.isOccupied ? '사용중' : '사용 안함', // 표시용 변환
                 }));
-                console.log("1. ==============>", response.data);
-                setEvents(fetchedEvents); // 3. 상태 업데이트
+                setEvents(fetchedEvents);
             })
             .catch(error => {
                 console.error('이벤트 데이터를 불러오지 못했습니다.', error);
             });
     };
-
-    const getClassroomType = (isOccupied) => {
-        if (isOccupied === false) return '사용 안함';
-        if (isOccupied === true) return '사용중';
-    };
-
-    //const validateName = (name) => {
-    //    if (name.length < 2 || name.includes(" ")) {
-    //        setNameError("2글자 이상이거나 공백이 들어가면 안됩니다.");
-    //        return;
-    //    } else {
-    //        setNameError('');
-    //    }
-    //};
 
     // 폼 초기화
     const resetForm = () => {
@@ -73,23 +61,26 @@ const ClassroomManager = () => {
 
     // 신규 강의실 추가
     const addClassroom = (newClassroom) => {
-        apiClient.post('classroom', newClassroom) // ID 없이 강의실 추가
+        apiClient.post('classroom', newClassroom)
             .then(response => {
-                setEvents([...events, response.data]); // 응답으로 받은 새 강의실 추가
+                const addedClassroom = {
+                    ...response.data,
+                    id: response.data.id || uuidv4(), // 서버가 `id`를 주지 않으면 클라이언트에서 임시로 생성
+                };
+                setEvents([...events, addedClassroom]);
+
                 alert('강의실이 추가되었습니다.');
-                console.log(newClassroom);
                 handleClose();
-                fetchEvents(); // 추가 후 이벤트 목록 새로 고침
+                fetchEvents();
             })
             .catch(error => {
-                console.log('1----->', newClassroom);
                 console.error('강의실 추가에 실패했습니다.', error);
             });
     };
 
     // 기존 강의실 수정
     const updateClassroom = (updatedClassroom) => {
-        apiClient.put('classroom', updatedClassroom) // ID 포함하여 수정
+        apiClient.put('classroom', updatedClassroom)
             .then(response => {
                 const updatedEvents = events.map(event =>
                     event.id === selectedEvent.id ? { ...event, ...updatedClassroom } : event
@@ -97,10 +88,9 @@ const ClassroomManager = () => {
                 setEvents(updatedEvents);
                 alert('강의실 정보가 수정되었습니다.');
                 handleClose();
-                fetchEvents(); // 수정 후 이벤트 목록 새로 고침
+                fetchEvents();
             })
             .catch(error => {
-                console.log(updatedClassroom);
                 console.error('강의실 수정에 실패했습니다.', error);
             });
     };
@@ -119,50 +109,48 @@ const ClassroomManager = () => {
             alert("이미 등록된 강의실입니다.");
             return;
         }
+        if (newClassroom.name.length < 2) {
+            alert("두 글자 이상 입력해주세요.")
+            return;
+        }
 
         if (editMode) {
-            // 수정
-            updateClassroom(newClassroom); // ID를 전달
+            updateClassroom(newClassroom);
         } else {
-            // 추가
             addClassroom(newClassroom);
         }
     };
 
     // 강의실 삭제 핸들러
     const deleteSelectedClassrooms = () => {
-        // 선택된 강의실 수를 확인
-        const classroomCount = selectedClassrooms.length;
-
-        if (classroomCount === 0) {
+        console.log(selectedClassrooms);
+        if (selectedClassrooms.length === 0) {
             alert("삭제할 강의실을 선택하세요");
             return;
         }
 
-        const confirmation = window.confirm(`선택된 강의실 ${classroomCount}개를 삭제하시겠습니까?`); // window.confirm 팝업창
+        // 선택된 강의실 ID 목록을 콘솔로 확인
+        console.log('삭제할 강의실 ID 목록:', selectedClassrooms);
+
+        const confirmation = window.confirm(`선택된 강의실 ${selectedClassrooms.length}개를 삭제하시겠습니까?`);
 
         if (confirmation) {
-            const deletePromises = selectedClassrooms.map(id => {
-                console.log("Deleting Classroom with ID:", id); // 삭제할 memberId 확인
-                return apiClient.delete(`classroom/${id}`);
-            });
+            const deletePromises = selectedClassrooms.map(id => apiClient.delete(`classroom/${id}`));
 
             Promise.all(deletePromises)
                 .then(() => {
                     const updatedEvents = events.filter(event => !selectedClassrooms.includes(event.id));
                     setEvents(updatedEvents);
-                    setSelectedClassrooms([]); // 선택한 강의실 목록 초기화
-                    alert(`${classroomCount}개 강의실 삭제 성공`);
+                    setSelectedClassrooms([]); // 삭제 후 선택된 강의실 목록 초기화
+                    alert(`${selectedClassrooms.length}개 강의실 삭제 성공`);
                 })
                 .catch(error => {
                     console.error('강의실 정보를 삭제하지 못했습니다.', error.response.data);
-                    alert('강의실 삭제 실패: ' + error.response.data.message); // 서버에서 받은 오류 메시지를 출력
+                    alert('강의실 삭제 실패: ' + error.response.data.message);
                 });
-        } else {
-            // 사용자가 삭제를 취소했을 때의 처리
-            return;
         }
     };
+
 
     // 강의실 수정 핸들러
     const editSelectedClassroom = () => {
@@ -176,61 +164,125 @@ const ClassroomManager = () => {
             setSelectedEvent(classroomToEdit);
             setNewEventId(classroomToEdit.id);
             setNewEventName(classroomToEdit.name);
-            setNewEventIsOccupied(classroomToEdit.isOccupied)
 
             setEditMode(true);
             setOpen(true);
         }
     };
 
-    // 체크박스 선택/해제 핸들러
-    const handleSelectClassroom = (classroomId) => {
-        setSelectedClassrooms((prevSelected) =>
-            prevSelected.includes(classroomId)
-                ? prevSelected.filter(id => id !== classroomId) // 선택 해제
-                : [...prevSelected, classroomId] // 선택 추가
-        );
-    };
-
     return (
         <div>
-            {/* 강의실 리스트 테이블 */}
-            <Table>
-                <TableHead>
-                    <TableRow>
-                        <TableCell>선택</TableCell>
-                        <TableCell>번호</TableCell>
-                        <TableCell>강의실명</TableCell>
-                        <TableCell>점유여부</TableCell>
-                    </TableRow>
-                </TableHead>
-                <TableBody>
-                    {events.map((event, index) => (
-                        <TableRow key={index}>
-                            <TableCell sx={{ paddingLeft: '8px' }}>
-                                <Checkbox
-                                    checked={selectedClassrooms.includes(event.id)}
-                                    onChange={() => handleSelectClassroom(event.id)}
-                                    sx={{ m1: -10 }}
-                                />
-                            </TableCell>
-                            <TableCell>{event.id}</TableCell>
-                            <TableCell>{event.name}</TableCell>
-                            <TableCell>{getClassroomType(event.isOccupied)}</TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
+            {/* 강의실 리스트 테이블 DataGrid로 변경 */}
+            <Box sx={{ height: 650, width: '100%' }}>
+                <DataGrid
+                    sx={{
+                        backgroundColor: "white", // 배경색
+                        border: "none", // 테두리
+                        "--DataGrid-rowBorderColor": "transparent",
+                        "& .MuiDataGrid-cell": {
+                            border: "none",
+                        },
+                        "& .MuiDataGrid-row": {
+                            borderBottom: "1px solid #f6f8fa",
+                        },
+                        "& .MuiDataGrid-filler": {
+                            display: "none",
+                        },
+                        "& .MuiDataGrid-footerContainer": {
+                            border: "none",
+                        },
+                        "& .MuiDataGrid-columnHeaderTitleContainer": {
+                            fontSize: "12px",
+                            fontWeight: "bold",
+                            color: "#222831",
+                        },
+                        "& .MuiDataGrid-columnSeparator--sideRight": {
+                            display: "none",
+                        },
+                        "& .MuiDataGrid-columnHeader": {
+                            color: "black", // 헤더 글자색
+                            border: "none",
+                        },
+                    }}
+                    localeText={{
+                        // 선택된 행 수 텍스트 변경
+                        footerRowSelected: (count) => `${count}개 선택됨`, // 예: "11개 선택됨"
+                        // 필터 관련 텍스트 변경
+                        filterOperatorContains: "포함",
+                        filterOperatorEquals: "같음",
+                        filterOperatorStartsWith: "시작함",
+                        filterOperatorEndsWith: "끝남",
+                        filterOperatorIs: "이것",
+                        filterOperatorDoesNotContain: "포함하지 않음",
+                        filterOperatorDoesNotEqual: "같지 않음",
+                        filterOperatorIsAnyOf: "다음 중 하나",
+                        filterOperatorNot: "아니오",
+                        filterOperatorAfter: "이후",
+                        filterOperatorBefore: "이전",
+                        filterOperatorIsEmpty: "비어 있음",
+                        filterOperatorIsNotEmpty: "비어 있지 않음",
+
+                        // 필터 메뉴 텍스트
+                        filterPanelInputLabel: "필터",
+                        filterPanelAddFilter: "필터 추가",
+                        filterPanelDeleteIconLabel: "삭제",
+                        filterPanelOperator: "연산자",
+                        filterPanelColumns: "데이터 열",
+                        filterPanelValue: "값",
+                        filterPanelOperatorAnd: "그리고",
+                        filterPanelOperatorOr: "또는",
+                        sortAscending: "오름차순 정렬",
+                        sortDescending: "내림차순 정렬",
+                        columnMenuSortAsc: "오름차순 정렬", // "Sort Ascending" 텍스트 변경
+                        columnMenuSortDesc: "내림차순 정렬", // "Sort Descending" 텍스트 변경
+                        columnMenuShowAll: "모두 표시", // "Show All" 텍스트 변경
+                        columnMenuFilter: "필터", // "Filter" 텍스트 변경
+                        columnMenuUnsort: "정렬 해제", // "Unsort" 텍스트 변경
+                        columnMenuHideColumn: "숨기기", // "Hide" 텍스트 변경
+                        columnMenuHideOn: "숨기기", // "Hide on" 텍스트 변경
+                        columnMenuManageColumns: "관리", // "Manage" 텍스트 변경
+                        // 페이지 관련 텍스트 변경
+                        page: "페이지",
+                        noRowsLabel: "데이터가 없습니다.",
+                        noResultsOverlayLabel: "결과가 없습니다.",
+                        errorOverlayDefaultLabel: "오류가 발생했습니다.",
+                        // 페이지네이션 관련 텍스트
+                        pageSize: "페이지 크기",
+                        pageSizeOptions: ["5", "10", "20"],
+                    }}
+                    rows={events} // 데이터
+                    columns={[
+                        { field: 'id', headerName: '번호', flex: 1 },
+                        { field: 'name', headerName: '강의실명', flex: 5 },
+                        { field: 'isOccupied', headerName: '점유여부', flex: 1 },
+                    ]}
+                    initialState={{
+                        pagination: {
+                            paginationModel: {
+                                pageSize: 10,
+                            },
+                        },
+                    }}
+                    pageSizeOptions={[10]}
+                    checkboxSelection // 행 선택을 위한 체크박스 추가
+                    onRowSelectionModelChange={(newSelection) => {
+                        setSelectedClassrooms(newSelection); // 상태 업데이트
+
+                    }}
+
+                    selectionModel={selectedClassrooms} // 선택된 ID 목록
+                />
+            </Box>
 
             {/* 등록, 수정, 삭제 버튼 */}
             <Box mt={2} sx={{ display: "flex", justifyContent: "flex-end" }}>
-                <Button variant="contained" color="primary" onClick={handleOpen} sx={{ mr: 2 }}>
+                <Button variant="outlined" onClick={handleOpen} sx={{ mr: 2 }}>
                     강의실 등록
                 </Button>
-                <Button variant="contained" color="secondary" onClick={editSelectedClassroom} sx={{ mr: 2 }}>
+                <Button variant="outlined" onClick={editSelectedClassroom} sx={{ mr: 2 }}>
                     강의실 수정
                 </Button>
-                <Button variant="contained" color="error" onClick={deleteSelectedClassrooms}>
+                <Button variant="outlined" onClick={deleteSelectedClassrooms}>
                     강의실 삭제
                 </Button>
             </Box>
@@ -249,7 +301,7 @@ const ClassroomManager = () => {
                         p: 4,
                         backgroundColor: "white",
                         borderRadius: "8px",
-                        maxWidth: "600px",
+                        maxWidth: "400px",
                         margin: "auto",
                         top: "20%",
                         position: "relative",
@@ -263,7 +315,7 @@ const ClassroomManager = () => {
                     <Box
                         sx={{
                             display: "grid",
-                            gridTemplateColumns: "1fr 1fr",
+                            gridTemplateColumns: "1fr",
                             gap: 2,
                             mt: 2,
                         }}
@@ -271,39 +323,24 @@ const ClassroomManager = () => {
                         <TextField
                             label="강의실명"
                             value={newEventName}
-                            onChange={(e) => {
-                                setNewEventName(e.target.value);
-                                //validateName(e.target.value);
-                            }}
+                            onChange={(e) => setNewEventName(e.target.value)}
                             error={!!nameError}
                             helperText={nameError}
                         />
-                        {/* 라디오 버튼: 점유여부 선택 */}
-                        <FormControl component="fieldset">
-                            <Typography>점유 여부</Typography>
-                            <RadioGroup
-                                row
-                                value={newEventIsOccupied}
-                                onChange={(e) => setNewEventIsOccupied(e.target.value)}
-                            >
-                                <FormControlLabel value='true' control={<Radio />} label="사용중" /*disabled={!editMode}*/ />
-                                <FormControlLabel value="false" control={<Radio />} label="사용 안함" /*disabled={!editMode}*/ />
-                            </RadioGroup>
-                        </FormControl>
                     </Box>
 
                     {/* 저장 및 취소 버튼 */}
                     <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 3 }}>
-                        <Button variant="contained" color="primary" onClick={handleSaveEvent}>
+                        <Button variant="outlined" color="primary" onClick={handleSaveEvent}>
                             저장
                         </Button>
-                        <Button variant="contained" color="secondary" onClick={handleClose} sx={{ ml: 2 }}>
+                        <Button variant="outlined" color="secondary" onClick={handleClose} sx={{ ml: 2 }}>
                             취소
                         </Button>
                     </Box>
                 </Box>
             </Modal>
-        </div>
+        </div >
     );
 };
 

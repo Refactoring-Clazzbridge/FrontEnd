@@ -35,6 +35,7 @@ import Calendar from "../pages/calendar/Calendars";
 // 유저관리
 import MemberManager from "../pages/manager/MemberManager";
 import ClassroomManager from "../pages/manager/ClassroomManager";
+import CourseManager from "../pages/manager/CourseManager";
 
 const Router = ({ isLoggedIn }) => {
   return (
@@ -75,6 +76,7 @@ const Router = ({ isLoggedIn }) => {
         {/* 관리 */}
         <Route path="memberManager" element={<MemberManager />} />
         <Route path="classroomManager" element={<ClassroomManager />} />
+        <Route path="courseManager" element={<CourseManager />} />
 
       </Route>
     </Routes>
