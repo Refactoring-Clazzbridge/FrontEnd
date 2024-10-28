@@ -1,5 +1,5 @@
 # 베이스 이미지를 명시해준다.
-FROM node:18 AS build
+FROM node:18
 
 
 # 작업 디렉토리 설정
