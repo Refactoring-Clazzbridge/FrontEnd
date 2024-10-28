@@ -1,5 +1,10 @@
 import React from "react";
+import ProfileCard from "../../components/seat/ProfileCard";
 
 export default function LectureRoom() {
-  return <div>강의실</div>;
+  return (
+    <div>
+      <ProfileCard />
+    </div>
+  );
 }

@@ -25,12 +25,13 @@ import Qna from "../pages/lectureRoom/Qna";
 import Vote from "../pages/lectureRoom/Vote";
 
 // 채팅 페이지
-import Chat from "../pages/chat/Chat";
+import Chat from "../pages/chat/MuiChat";
 import Allchat from "../pages/chat/Allchat";
 import Privatechat from "../pages/chat/Privatechat";
 
 // 캘린더 페이지
 import Calendar from "../pages/calendar/Calendars";
+import QuestionList from "../pages/qna/QuestionListDataGrid";
 
 // 유저관리
 import MemberManager from "../pages/manager/MemberManager";
@@ -38,6 +39,7 @@ import ClassroomManager from "../pages/manager/ClassroomManager";
 import CourseManager from "../pages/manager/CourseManager";
 
 const Router = ({ isLoggedIn }) => {
+  console.log("router, ", isLoggedIn);
   return (
     <Routes>
       <Route element={<LayoutWrapper />}>
@@ -62,7 +64,7 @@ const Router = ({ isLoggedIn }) => {
         {/* 강의실 페이지 */}
         <Route path="lectureroom" element={<LectureRoom />} />
         <Route path="assignment" element={<Assignment />} />
-        <Route path="qna" element={<Qna />} />
+        <Route path="qna" element={<QuestionList />} />
         <Route path="vote" element={<Vote />} />
 
         {/* 채팅 페이지 */}

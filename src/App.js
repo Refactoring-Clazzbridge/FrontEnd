@@ -1,11 +1,11 @@
 import "./App.css";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { SidebarProvider } from "./context/SidebarContext";
 import Login from "./pages/login/Login";
 import Router from "./shared/Router";
 import { UserProvider } from "./context/UserContext";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
-import "quill/dist/quill.snow.css"; // Quill 기본 스타일
+import { SocketProvider } from "./context/SocketContext";
 
 const theme = createTheme({
   typography: {
@@ -20,6 +20,12 @@ function App() {
     setIsLoggedIn(true);
   };
 
+  // useEffect(() => {
+  //   console.log("isLoggedIn 상태 변경:", isLoggedIn);
+  // }, [isLoggedIn]);
+
+  console.log("App.js, ", isLoggedIn);
+
   return (
     <ThemeProvider theme={theme}>
       <UserProvider>
@@ -27,7 +33,7 @@ function App() {
           {isLoggedIn ? (
             <Router /> // 로그인 후 Router 화면
           ) : (
-            <Login onLoginSuccess={handleLoginSuccess} /> // Login 컴포넌트
+            <Login /> // Login 컴포넌트
           )}
         </SidebarProvider>
       </UserProvider>
