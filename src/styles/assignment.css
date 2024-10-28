@@ -1,0 +1,15 @@
+.assignmentImage img {
+  width: 100%;
+}
+
+.ql-editor {
+  min-height: 300px; /* 원하는 높이로 설정 */
+}
+
+.ql-editor img {
+  max-width: 30% !important;
+}
+
+.submissionImage img {
+  width: 30%;
+}
