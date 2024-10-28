@@ -7,6 +7,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import apiClient from '../../shared/apiClient';
 import 'moment/locale/ko'; // 한국어 로케일 불러오기
+import CustomSnackbar from "../../components/common/CustomSnackbar"; // 커스텀 스낵바
 
 moment.locale('ko');
 
@@ -41,6 +42,13 @@ const Calendars = () => {
   const [newEventDescription, setNewEventDescription] = useState('');
   const [newEventStart, setNewEventStart] = useState(moment());
   const [newEventEnd, setNewEventEnd] = useState(moment().add(1, 'hour'));
+
+  const [openSnackbar, setOpenSnackbar] = useState(false); // 스낵바 열기 상태
+  const [snackbarMessage, setSnackbarMessage] = useState(""); // 스낵바 메시지
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success"); // 스낵바 성공/실패 유무
+  const handleCloseSnackbar = () => {
+      setOpenSnackbar(false); // 스낵바 닫기
+  };
 
   const [error, setError] = useState("");
 
@@ -195,7 +203,9 @@ const Calendars = () => {
 
             // 이벤트 목록에 새로 추가된 이벤트 반영
             setEvents([...events, savedEvent]);
-            alert('일정이 추가되었습니다.');
+            setSnackbarMessage('일정이 추가되었습니다.');
+            setSnackbarSeverity("success");
+            setOpenSnackbar(true);
             handleClose(); // 모달 닫기
             fetchEvents();
           })
@@ -210,7 +220,9 @@ const Calendars = () => {
               event.id === selectedEvent.id ? { ...event, ...newEvent } : event
             );
             setEvents(updatedEvents);
-            alert('일정이 수정되었습니다.');
+            setSnackbarMessage('일정이 수정되었습니다.');
+            setSnackbarSeverity("success");
+            setOpenSnackbar(true);
             handleClose(); // 모달 닫기
             fetchEvents();
           })
@@ -228,7 +240,9 @@ const Calendars = () => {
         .then(() => {
           const filteredEvents = events.filter(event => event.id !== selectedEvent.id);
           setEvents(filteredEvents);
-          alert('일정이 삭제되었습니다.');
+          setSnackbarMessage('일정이 삭제되었습니다.');
+          setSnackbarSeverity("success");
+          setOpenSnackbar(true);
           handleClose(); // 모달 닫기
           fetchEvents();
         })
@@ -240,7 +254,15 @@ const Calendars = () => {
   };
 
   return (
-    <LocalizationProvider dateAdapter={AdapterMoment}>
+      <LocalizationProvider dateAdapter={AdapterMoment}>
+
+      {/* 커스텀 스낵바 */}
+      <CustomSnackbar
+          open={openSnackbar}
+          message={snackbarMessage}
+          severity={snackbarSeverity}
+          onClose={handleCloseSnackbar}
+      />
 
       <div style={{ height: '80vh' }}>
         {role === "ROLE_ADMIN" ?

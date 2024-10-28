@@ -3,6 +3,7 @@ import { Button, Modal, Typography, TextField, Box } from "@mui/material";
 import { DataGrid } from '@mui/x-data-grid'; // DataGrid 임포트
 import apiClient from '../../shared/apiClient';
 import { v4 as uuidv4 } from 'uuid'; // 고유한 ID를 생성하기 위해 uuid 패키지 사용
+import CustomSnackbar from "../../components/common/CustomSnackbar"; // 커스텀 스낵바
 
 const ClassroomManager = () => {
     const [open, setOpen] = useState(false);
@@ -14,6 +15,13 @@ const ClassroomManager = () => {
     const [newEventId, setNewEventId] = useState(''); // ID 추가
     const [newEventName, setNewEventName] = useState('');
     const [newEventIsOccupied, setNewEventIsOccupied] = useState('');
+
+    const [openSnackbar, setOpenSnackbar] = useState(false); // 스낵바 열기 상태
+    const [snackbarMessage, setSnackbarMessage] = useState(""); // 스낵바 메시지
+    const [snackbarSeverity, setSnackbarSeverity] = useState("success"); // 스낵바 성공/실패 유무
+    const handleCloseSnackbar = () => {
+        setOpenSnackbar(false); // 스낵바 닫기
+    };
 
     const [events, setEvents] = useState([]);
 
@@ -68,8 +76,9 @@ const ClassroomManager = () => {
                     id: response.data.id || uuidv4(), // 서버가 `id`를 주지 않으면 클라이언트에서 임시로 생성
                 };
                 setEvents([...events, addedClassroom]);
-
-                alert('강의실이 추가되었습니다.');
+                setSnackbarMessage('강의실이 추가되었습니다.');
+                setSnackbarSeverity("success");
+                setOpenSnackbar(true);
                 handleClose();
                 fetchEvents();
             })
@@ -86,7 +95,9 @@ const ClassroomManager = () => {
                     event.id === selectedEvent.id ? { ...event, ...updatedClassroom } : event
                 );
                 setEvents(updatedEvents);
-                alert('강의실 정보가 수정되었습니다.');
+                setSnackbarMessage('강의실 정보가 수정되었습니다.');
+                setSnackbarSeverity("success");
+                setOpenSnackbar(true);
                 handleClose();
                 fetchEvents();
             })
@@ -106,11 +117,15 @@ const ClassroomManager = () => {
         const existingClassroom = events.find(event => event.name === newEventName && (!editMode || event.id !== newEventId));
 
         if (existingClassroom) {
-            alert("이미 등록된 강의실입니다.");
+            setSnackbarMessage("이미 등록된 강의실입니다.");
+            setSnackbarSeverity("error");
+            setOpenSnackbar(true);
             return;
         }
         if (newClassroom.name.length < 2) {
-            alert("두 글자 이상 입력해주세요.")
+            setSnackbarMessage("두 글자 이상 입력해주세요.");
+            setSnackbarSeverity("error");
+            setOpenSnackbar(true);
             return;
         }
 
@@ -125,7 +140,9 @@ const ClassroomManager = () => {
     const deleteSelectedClassrooms = () => {
         console.log(selectedClassrooms);
         if (selectedClassrooms.length === 0) {
-            alert("삭제할 강의실을 선택하세요");
+            setSnackbarMessage("삭제할 강의실을 선택하세요");
+            setSnackbarSeverity("error");
+            setOpenSnackbar(true);
             return;
         }
 
@@ -142,7 +159,9 @@ const ClassroomManager = () => {
                     const updatedEvents = events.filter(event => !selectedClassrooms.includes(event.id));
                     setEvents(updatedEvents);
                     setSelectedClassrooms([]); // 삭제 후 선택된 강의실 목록 초기화
-                    alert(`${selectedClassrooms.length}개 강의실 삭제 성공`);
+                    setSnackbarMessage(`${selectedClassrooms.length}개 강의실 삭제 성공`);
+                    setSnackbarSeverity("success");
+                    setOpenSnackbar(true);
                 })
                 .catch(error => {
                     console.error('강의실 정보를 삭제하지 못했습니다.', error.response.data);
@@ -155,7 +174,9 @@ const ClassroomManager = () => {
     // 강의실 수정 핸들러
     const editSelectedClassroom = () => {
         if (selectedClassrooms.length !== 1) {
-            alert('수정할 강의실은 하나만 선택해야 합니다.');
+            setSnackbarMessage('수정할 강의실은 하나만 선택해야 합니다.');
+            setSnackbarSeverity("error");
+            setOpenSnackbar(true);
             return;
         }
 
@@ -172,6 +193,13 @@ const ClassroomManager = () => {
 
     return (
         <div>
+            {/* 커스텀 스낵바 */}
+            <CustomSnackbar
+                open={openSnackbar}
+                message={snackbarMessage}
+                severity={snackbarSeverity}
+                onClose={handleCloseSnackbar}
+            />
             {/* 강의실 리스트 테이블 DataGrid로 변경 */}
             <Box sx={{ height: 650, width: '100%' }}>
                 <DataGrid

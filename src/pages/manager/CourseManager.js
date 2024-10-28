@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Button, Modal, Typography, TextField, Box, FormControl, InputLabel, Select, MenuItem, Snackbar, Alert } from "@mui/material";
+import { Button, Modal, Typography, TextField, Box, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
 import moment from 'moment';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { DataGrid } from '@mui/x-data-grid'; // DataGrid 임포트
 import { v4 as uuidv4 } from 'uuid'; // 고유한 ID를 생성하기 위해 uuid 패키지 사용
 import apiClient from '../../shared/apiClient';
+import CustomSnackbar from "../../components/common/CustomSnackbar"; // 커스텀 스낵바
 
 const CourseManager = () => {
     const [open, setOpen] = useState(false);
@@ -25,14 +26,14 @@ const CourseManager = () => {
     const [events, setEvents] = useState([]);
     const [classroomOption, setClassroomOption] = useState([]); // 강의실 목록 상태
 
-    const [openSuccessSnackbar, setOpenSuccessSnackbar] = useState('');
-    const [successMessage, setSuccessMessage] = useState('');
+    const [openSnackbar, setOpenSnackbar] = useState(false); // 스낵바 열기 상태
+    const [snackbarMessage, setSnackbarMessage] = useState(""); // 스낵바 메시지
+    const [snackbarSeverity, setSnackbarSeverity] = useState("success"); // 스낵바 성공/실패 유무
+    const handleCloseSnackbar = () => {
+        setOpenSnackbar(false); // 스낵바 닫기
+    };
 
     const [dateError, setDateError] = useState("");
-
-    const handleCloseSuccessSnackbar = () => {
-        setOpenSuccessSnackbar(false);
-    };
 
     // 에러 상태 관리
 
@@ -98,8 +99,9 @@ const CourseManager = () => {
                     id: response.data.id || uuidv4(), // 서버가 `id`를 주지 않으면 클라이언트에서 임시로 생성
                 };
                 setEvents([...events, addedCourse]);// 응답으로 받은 새 강의 추가
-                setSuccessMessage('강의가 추가되었습니다.');
-                setOpenSuccessSnackbar(true);
+                setSnackbarMessage('강의가 추가되었습니다.');
+                setSnackbarSeverity("success");
+                setOpenSnackbar(true);
                 handleClose();
                 fetchEvents(); // 추가 후 이벤트 목록 새로 고침
             })
@@ -116,8 +118,9 @@ const CourseManager = () => {
                     event.id === selectedEvent.id ? { ...event, ...updatedCourse } : event
                 );
                 setEvents(updatedEvents);
-                setSuccessMessage('강의 정보가 수정되었습니다.');
-                setOpenSuccessSnackbar(true);
+                setSnackbarMessage('강의 정보가 수정되었습니다.');
+                setSnackbarSeverity("success");
+                setOpenSnackbar(true);
                 handleClose();
                 fetchEvents(); // 수정 후 이벤트 목록 새로 고침
             })
@@ -148,8 +151,9 @@ const CourseManager = () => {
         const existingCourse = events.find(event => event.title === newEventTitle && (!editMode || event.id !== newEventId));
 
         if (existingCourse) {
-            setSuccessMessage("이미 등록된 강의명입니다.");
-            setOpenSuccessSnackbar(true);
+            setSnackbarMessage("이미 등록된 강의명입니다.");
+            setSnackbarSeverity("error"); // 실패 스낵바
+            setOpenSnackbar(true);
             return;
         }
 
@@ -163,8 +167,9 @@ const CourseManager = () => {
         );
 
         if (useClassroom) {
-            setSuccessMessage("해당 강의실은 선택하신 기간 동안 이미 사용 중입니다.");
-            setOpenSuccessSnackbar(true);
+            setSnackbarMessage("해당 강의실은 선택하신 기간 동안 이미 사용 중입니다.");
+            setSnackbarSeverity("error"); // 실패 스낵바
+            setOpenSnackbar(true);
             return;
         }
 
@@ -185,8 +190,9 @@ const CourseManager = () => {
         const courseCount = selectedCourses.length;
 
         if (courseCount === 0) {
-            setSuccessMessage("삭제할 강의를 선택하세요.");
-            setOpenSuccessSnackbar(true);
+            setSnackbarMessage("삭제할 강의를 선택하세요.");
+            setSnackbarSeverity("error"); // 실패 스낵바
+            setOpenSnackbar(true);
             return;
         }
 
@@ -203,12 +209,15 @@ const CourseManager = () => {
                     const updatedEvents = events.filter(event => !selectedCourses.includes(event.id));
                     setEvents(updatedEvents);
                     setSelectedCourses([]); // 선택한 강의 목록 초기화
-                    setSuccessMessage(`${courseCount}개의 강의 삭제 성공`);
-                    setOpenSuccessSnackbar(true);
+                    setSnackbarMessage(`${courseCount}개의 강의 삭제 성공`);
+                    setSnackbarSeverity("success");
+                    setOpenSnackbar(true);
                 })
                 .catch(error => {
                     console.error('강의 정보를 삭제하지 못했습니다.', error.response.data);
-                    alert('강의 삭제 실패: ' + error.response.data.message); // 서버에서 받은 오류 메시지를 출력
+                    setSnackbarMessage('강의 삭제 실패: ' + error.response.data.message); // 서버에서 받은 오류 메시지를 출력
+                    setSnackbarSeverity("error");
+                    setOpenSnackbar(true);
                 });
         } else {
             // 사용자가 삭제를 취소했을 때의 처리
@@ -219,8 +228,9 @@ const CourseManager = () => {
     // 강의 수정 핸들러
     const editSelectedCourse = () => {
         if (selectedCourses.length !== 1) {
-            setSuccessMessage('수정 및 조회할 강의는 하나 선택해야 합니다.');
-            setOpenSuccessSnackbar(true);
+            setSnackbarMessage('수정 및 조회할 강의는 하나 선택해야 합니다.');
+            setSnackbarSeverity("error"); // 실패 스낵바
+            setOpenSnackbar(true);
             return;
         }
 
@@ -241,21 +251,13 @@ const CourseManager = () => {
 
     return (
         <LocalizationProvider dateAdapter={AdapterMoment}>
-            {/* 성공 Snackbar */}
-            <Snackbar
-                open={openSuccessSnackbar}
-                autoHideDuration={2200}
-                onClose={handleCloseSuccessSnackbar}
-                anchorOrigin={{ vertical: "top", horizontal: "center" }}
-            >
-                <Alert
-                    onClose={handleCloseSuccessSnackbar}
-                    severity="success"
-                    sx={{ width: "100%" }}
-                >
-                    {successMessage}
-                </Alert>
-            </Snackbar>
+            {/* 커스텀 스낵바 */}
+            <CustomSnackbar
+                open={openSnackbar}
+                message={snackbarMessage}
+                severity={snackbarSeverity}
+                onClose={handleCloseSnackbar}
+            />
             <div>
                 {/* 강의 리스트 테이블 */}
                 <Box sx={{ height: 650, width: '100%' }}>
@@ -342,7 +344,6 @@ const CourseManager = () => {
                             { field: 'id', headerName: '번호', flex: 0.5 },
                             { field: 'instructor', headerName: '강사', flex: 1 },
                             { field: 'title', headerName: '강의명', flex: 1.5 },
-                            //{ field: 'description', headerName: '설명', flex: 1.3 },
                             { field: 'startDate', headerName: '시작 날짜', flex: 1.3 },
                             { field: 'endDate', headerName: '종료 날짜', flex: 1.3 },
                             { field: 'classroomName', headerName: '강의실', flex: 1.5, ml: 30 },

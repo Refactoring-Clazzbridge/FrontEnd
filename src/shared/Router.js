@@ -22,7 +22,7 @@ import PasswordCheck from "../pages/user/PasswordCheck";
 import LectureRoom from "../pages/lectureRoom/LectureRoom";
 import Assignment from "../pages/lectureRoom/Assignment";
 import Qna from "../pages/lectureRoom/Qna";
-import Vote from "../pages/lectureRoom/Vote";
+import Vote from "../pages/vote/Vote";
 
 // 채팅 페이지
 import Chat from "../pages/chat/MuiChat";
