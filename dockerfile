@@ -1,10 +1,12 @@
-FROM node:18
+FROM node:20
 
 WORKDIR /FrontEnd
 
 COPY package.json package-lock.json ./
 
+
 RUN npm install
+RUN npm install --save-dev @babel/plugin-syntax-dynamic-import
 
 COPY ./ ./
 
@@ -14,4 +16,4 @@ WORKDIR /FrontEnd/build
 
 EXPOSE 3000
 
-CMD ["npx", "serve", "-s", "build"]
+CMD ["npx", "serve", "-s", "."] 
