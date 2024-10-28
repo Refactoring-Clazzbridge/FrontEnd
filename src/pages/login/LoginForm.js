@@ -20,7 +20,7 @@ function LoginForm({ onLoginSuccess }) {
   const [loading, setLoading] = useState(false);
   const [isSeatRegistered, setIsSeatRegistered] = useState(false); // 좌석 등록 여부 상태
   const [seatData, setSeatData] = useState(null); // 좌석 정보 상태
-  const { setUserInfo } = useContext(UserContext);
+  const { setUserInfo, addCourseIdToUserInfo } = useContext(UserContext); // addCourseIdToUserInfo 사용 가능
 
   const minLength = 8;
 
@@ -51,7 +51,6 @@ function LoginForm({ onLoginSuccess }) {
         localStorage.setItem("userInfo", JSON.stringify({ member })); // 로컬 스토리지에 저장
         localStorage.setItem("userId", member.id); // 로컬 스토리지에 저장
         localStorage.setItem("membertype", member.memberType); // 로컬 스토리지에 저장
-
 
         console.log(
           "response.data.refreshToken: " + response.data.refreshTokenCookie
@@ -85,8 +84,8 @@ function LoginForm({ onLoginSuccess }) {
         localStorage.setItem("seatInfo", JSON.stringify(seatInfo));
 
         // 좌석이 등록된 상태로 업데이트
-        setIsSeatRegistered(true);  // 좌석이 등록되었다고 설정
-        setSeatData(seatInfo);      // 좌석 정보 저장
+        setIsSeatRegistered(true); // 좌석이 등록되었다고 설정
+        setSeatData(seatInfo); // 좌석 정보 저장
       } else {
         setIsSeatRegistered(false); // 좌석 정보가 없으면 미등록 상태로 설정
         console.log("좌석 정보가 없습니다.");

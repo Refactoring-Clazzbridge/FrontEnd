@@ -10,7 +10,7 @@ export const saveQuestionApi = async (data) => {
   };
 
   try {
-    const response = await apiClient.post(`qnas/questions`, savedQuestion);
+    const response = await apiClient.post(`qnas/questions/`, savedQuestion);
     return response.data;
   } catch (error) {
     console.error("Error fetching question:", error);

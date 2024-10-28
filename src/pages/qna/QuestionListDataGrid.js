@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useContext } from "react";
 import {
   Box,
   Button,
@@ -12,18 +12,21 @@ import { DataGrid } from "@mui/x-data-grid";
 import CreateIcon from "@mui/icons-material/Create";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
-import CloseIcon from "@mui/icons-material/Close";
 import CustomModal from "../../components/common/CustomModal";
 // 중복된 import를 제거하고, 하나의 올바른 경로로 수정
 import { saveQuestionApi } from "../../services/apis/question/post";
 import { deleteQuestionsApi } from "../../services/apis/question/delete";
-import { getAllQuestions } from "../../services/apis/question/get";
+import { getQuestionsByCourseId } from "../../services/apis/question/get";
 import { updateQuestionApi } from "../../services/apis/question/put";
-
+import { UserContext } from "../../context/UserContext";
 import { getAnswersByQuestionIdApi } from "../../services/apis/answer/get";
 import { saveAnswerApi } from "../../services/apis/answer/post";
 import { updateAnswerApi } from "../../services/apis/answer/put";
 import { deleteAnswerApi } from "../../services/apis/answer/delete";
+import { getTeacherCourseId } from "../../services/apis/course/teacherCourseGet";
+import { getStudentCourseId } from "../../services/apis/course/studentCourseGet";
+import { getAllQuestions } from "../../services/apis/question/get";
+
 const columns = [
   { field: "id", headerName: "No", flex: 0.5, resizable: false },
   {
@@ -60,11 +63,24 @@ const columns = [
     flex: 1,
     headerName: "작성날짜",
     resizable: false,
+    valueFormatter: (params) => {
+      const date = new Date(params.value);
+      return date.toLocaleString("ko-KR", {
+        timeZone: "Asia/Seoul",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+    },
   },
 ];
 
 export default function QuestionBoard() {
   // 상태 관리
+  const { userInfo } = useContext(UserContext);
   const [rows, setRows] = useState([]);
   const [openDrawer, setOpenDrawer] = useState(false);
   const [selectedRow, setSelectedRow] = useState(null);
@@ -80,6 +96,8 @@ export default function QuestionBoard() {
   const [editingAnswerId, setEditingAnswerId] = useState(null);
   const [editedAnswerContent, setEditedAnswerContent] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
+  const [courseId, setCourseId] = useState(null); // 강의 ID 상태 추가
+  const [type, setType] = useState(null);
 
   // 기본 유틸리티 함수
   const showSnackbar = (message, severity = "success") => {
@@ -95,15 +113,29 @@ export default function QuestionBoard() {
     setEditedAnswerContent("");
   };
 
-  // 초기 데이터 로딩
+  //초기 데이터 설정
   const fetchQuestions = useCallback(async () => {
+    // 관리자가 아닌 경우에만 courseId 체크
+    if (type !== "ROLE_ADMIN" && !courseId) {
+      console.log("Course ID가 설정되지 않았습니다:", courseId);
+      return;
+    }
+
     try {
-      const data = await getAllQuestions();
+      let data;
+      if (type === "ROLE_ADMIN") {
+        data = await getAllQuestions();
+      } else {
+        console.log("질문을 가져오는 중... courseId:", courseId);
+        data = await getQuestionsByCourseId(courseId);
+      }
+      console.log("가져온 질문 데이터:", data);
       setRows(data);
     } catch (error) {
+      console.error("질문 목록을 불러오는데 실패했습니다:", error);
       showSnackbar("질문 목록을 불러오는데 실패했습니다.", "error");
     }
-  }, []);
+  }, [courseId, type]);
 
   const fetchAnswers = useCallback(async (questionId) => {
     try {
@@ -129,15 +161,6 @@ export default function QuestionBoard() {
   }, [fetchQuestions]);
 
   useEffect(() => {
-    const memberId = localStorage.getItem("memberId");
-    if (!memberId) {
-      console.warn("memberId가 localStorage에 없습니다.");
-    } else {
-      console.log("localStorage에서 가져온 memberId:", memberId);
-    }
-  }, []);
-
-  useEffect(() => {
     if (selectedRow?.id) {
       fetchAnswers(selectedRow.id);
     }
@@ -147,6 +170,53 @@ export default function QuestionBoard() {
     console.log("Fetched answers:", answers); // answers 배열이 업데이트될 때마다 출력
   }, [answers]); // answers가 변경될 때마다 실행
 
+  useEffect(() => {
+    console.log("User Info:", userInfo);
+  }, [userInfo]);
+
+  useEffect(() => {
+    const fetchCourseId = async () => {
+      try {
+        console.log("전체 userInfo:", userInfo);
+        const memberType = userInfo?.member?.memberType;
+        setType(memberType);
+
+        if (!memberType) {
+          console.log("memberType이 아직 설정되지 않음");
+          return;
+        }
+
+        // 관리자인 경우 모든 질문을 가져옴
+        if (memberType === "ROLE_ADMIN") {
+          const allQuestions = await getAllQuestions();
+          setRows(allQuestions);
+          return;
+        }
+
+        // 교사/학생인 경우 기존 로직 유지
+        let fetchedCourseId;
+        if (memberType === "ROLE_TEACHER") {
+          fetchedCourseId = await getTeacherCourseId();
+        } else if (memberType === "ROLE_STUDENT") {
+          fetchedCourseId = await getStudentCourseId();
+        }
+
+        console.log("가져온 courseId:", fetchedCourseId);
+        if (fetchedCourseId) {
+          setCourseId(fetchedCourseId);
+          console.log("설정된 courseId:", fetchedCourseId);
+        }
+      } catch (error) {
+        console.error(
+          "Error fetching course ID:",
+          error.response?.data || error.message
+        );
+      }
+    };
+
+    fetchCourseId();
+  }, [userInfo]);
+
   // 질문 관련 핸들러
   const handleQuestionSubmit = async () => {
     if (!content.trim()) {
@@ -154,8 +224,20 @@ export default function QuestionBoard() {
       return;
     }
 
+    if (!userInfo?.member?.id || !courseId) {
+      showSnackbar(
+        "로그인 정보나 강의 정보가 필요합니다. 로그인 후 다시 시도하세요.",
+        "error"
+      );
+      return;
+    }
+
     try {
-      await saveQuestionApi({ content });
+      await saveQuestionApi({
+        content,
+        memberId: userInfo.member.id,
+        courseId, // 강의 ID 포함
+      });
       showSnackbar("질문이 등록되었습니다.");
       await fetchQuestions();
       setIsModalOpen(false);
@@ -166,13 +248,26 @@ export default function QuestionBoard() {
   };
 
   const handleQuestionUpdate = async () => {
+    if (!canEditQuestion(selectedRow)) {
+      showSnackbar("수정 권한이 없습니다.", "error");
+      return;
+    }
     try {
-      await updateQuestionApi({
+      const updatedQuestion = await updateQuestionApi({
         id: selectedRow.id,
         content: content || selectedRow.content,
       });
       showSnackbar("질문이 수정되었습니다.");
-      await fetchQuestions();
+
+      // 질문 목록을 업데이트하여 화면에 즉시 반영
+      setRows((prevRows) =>
+        prevRows.map((row) =>
+          row.id === updatedQuestion.id
+            ? { ...row, content: updatedQuestion.content }
+            : row
+        )
+      );
+
       setIsEditing(false);
       resetForm();
     } catch (error) {
@@ -181,6 +276,22 @@ export default function QuestionBoard() {
   };
 
   const handleQuestionDelete = async () => {
+    // selectedIds에 있는 모든 질문에 대해 권한 체크
+    const hasPermission = selectedIds.every((id) => {
+      const question = rows.find((row) => row.id === id);
+      if (!question) return false;
+      return (
+        type === "ROLE_ADMIN" ||
+        type === "ROLE_TEACHER" ||
+        (type === "ROLE_STUDENT" && question.studentId === userInfo?.member?.id)
+      );
+    });
+
+    if (!hasPermission) {
+      showSnackbar("삭제 권한이 없습니다.", "error");
+      return;
+    }
+
     try {
       await deleteQuestionsApi(selectedIds);
       showSnackbar("질문이 삭제되었습니다.");
@@ -207,10 +318,24 @@ export default function QuestionBoard() {
 
   // 답변 관련 핸들러
   const handleAnswerSubmit = async () => {
-    const memberId = localStorage.getItem("memberId");
+    if (!canManageAnswers()) {
+      showSnackbar("답변 등록 권한이 없습니다.", "error");
+      return;
+    }
 
-    console.log("memberId:", memberId);
-    console.log("questionId:", selectedRow.id);
+    if (!newAnswer.trim()) {
+      showSnackbar("답변 내용을 입력하세요.", "warning");
+      return;
+    }
+
+    if (!userInfo?.member?.id) {
+      // userInfo.member.id가 없을 때 경고 메시지
+      showSnackbar("사용자 정보가 없습니다. 로그인 해주세요.", "error");
+      return;
+    }
+
+    console.log("userInfo.member.id (memberId):", userInfo.member.id);
+    console.log("questionId:", selectedRow?.id);
     console.log("newAnswer:", newAnswer);
 
     if (!newAnswer.trim()) {
@@ -218,20 +343,20 @@ export default function QuestionBoard() {
       return;
     }
 
-    if (!memberId || !selectedRow?.id) {
-      showSnackbar("필수 값이 누락되었습니다.", "error");
+    if (!selectedRow?.id) {
+      showSnackbar("질문을 선택해주세요.", "error");
       return;
     }
 
     try {
       const response = await saveAnswerApi({
-        teacherId: memberId, // 교사 ID
-        questionId: selectedRow.id, // 질문 ID
+        teacherId: userInfo.member.id, // userInfo.member.id를 교사 ID로 사용
+        questionId: selectedRow.id, // 선택한 질문의 ID
         content: newAnswer, // 답변 내용
       });
       console.log("서버 응답:", response);
       showSnackbar("답변이 등록되었습니다.");
-      await fetchAnswers(selectedRow.id);
+      await fetchAnswers(selectedRow.id); // 답변 목록 갱신
       setNewAnswer("");
     } catch (error) {
       showSnackbar("답변 등록에 실패했습니다.", "error");
@@ -239,31 +364,43 @@ export default function QuestionBoard() {
     }
   };
 
+  // 답변 수정 핸들러
   const handleAnswerUpdate = async (answerId) => {
-    try {
-      if (!editedAnswerContent.trim()) {
-        showSnackbar("답변 내용을 입력하세요.", "warning");
-        return;
-      }
+    if (!canManageAnswers()) {
+      showSnackbar("답변 수정 권한이 없습니다.", "error");
+      return;
+    }
 
+    if (!editedAnswerContent.trim()) {
+      showSnackbar("답변 내용을 입력하세요.", "warning");
+      return;
+    }
+
+    if (!editedAnswerContent.trim()) {
+      showSnackbar("답변 내용을 입력하세요.", "warning");
+      return;
+    }
+
+    try {
       await updateAnswerApi({
-        questionId: selectedRow.id,
-        teacherAnswer: newAnswer,
+        id: answerId,
+        content: editedAnswerContent,
       });
       showSnackbar("답변이 수정되었습니다.");
-
-      // 새로 수정된 내용을 반영하기 위해 답변 목록 다시 불러오기
       await fetchAnswers(selectedRow.id);
-
-      // 수정 후 상태 초기화
-      setEditingAnswerId(null);
+      setEditingAnswerId(null); // 수정 모드 종료
       setEditedAnswerContent("");
     } catch (error) {
       showSnackbar("답변 수정에 실패했습니다.", "error");
     }
   };
 
+  // 답변 삭제 핸들러
   const handleAnswerDelete = async (answerId) => {
+    if (!canManageAnswers()) {
+      showSnackbar("답변 삭제 권한이 없습니다.", "error");
+      return;
+    }
     try {
       await deleteAnswerApi(answerId);
       showSnackbar("답변이 삭제되었습니다.");
@@ -273,14 +410,47 @@ export default function QuestionBoard() {
     }
   };
 
+  // 답변 수정 시작 핸들러 (수정 모드 활성화)
   const handleStartAnswerEdit = (answer) => {
     setEditingAnswerId(answer.id);
     setEditedAnswerContent(answer.content);
   };
 
+  // 답변 수정 취소 핸들러
   const handleCancelAnswerEdit = () => {
     setEditingAnswerId(null);
     setEditedAnswerContent("");
+  };
+
+  // 권한 체크 유틸리티 함수들
+  const canEditQuestion = (question) => {
+    const memberType = userInfo?.member?.memberType;
+    const userId = userInfo?.member?.id;
+
+    console.log("Current user:", userId);
+    console.log("Question student:", question.studentId);
+    console.log("User type:", memberType);
+
+    return (
+      memberType === "ROLE_ADMIN" || // 관리자는 모든 질문 수정 가능
+      (memberType === "ROLE_STUDENT" && question.studentId === userId) // 학생은 자신의 질문만 수정 가능
+    );
+  };
+
+  const canDeleteQuestion = (question) => {
+    const memberType = userInfo?.member?.memberType;
+    const userId = userInfo?.member?.id;
+
+    return (
+      memberType === "ROLE_ADMIN" || // 관리자는 모든 질문 삭제 가능
+      memberType === "ROLE_TEACHER" || // 강사는 모든 질문 삭제 가능
+      (memberType === "ROLE_STUDENT" && question.studentId === userId) // 학생은 자신의 질문만 삭제 가능
+    );
+  };
+
+  const canManageAnswers = () => {
+    const memberType = userInfo?.member?.memberType;
+    return ["ROLE_ADMIN", "ROLE_TEACHER"].includes(memberType); // 관리자와 강사 모두 답변 관리 가능
   };
 
   return (
@@ -530,7 +700,7 @@ export default function QuestionBoard() {
                     sx={{ fontSize: "13px" }}
                   />
                 ) : (
-                  <Typography sx={{ fontSize: "15px" }}>
+                  <Typography sx={{ fontSize: "15px", whiteSpace: "pre-wrap" }}>
                     {selectedRow.content}
                   </Typography>
                 )}
@@ -559,21 +729,25 @@ export default function QuestionBoard() {
                   </>
                 ) : (
                   <>
-                    <Button
-                      variant="outlined"
-                      onClick={() => setIsEditing(true)}
-                    >
-                      수정
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      onClick={() => {
-                        setSelectedIds([selectedRow.id]);
-                        setIsDeleteModalOpen(true);
-                      }}
-                    >
-                      삭제
-                    </Button>
+                    {canEditQuestion(selectedRow) && (
+                      <Button
+                        variant="outlined"
+                        onClick={() => setIsEditing(true)}
+                      >
+                        수정
+                      </Button>
+                    )}
+                    {canDeleteQuestion(selectedRow) && (
+                      <Button
+                        variant="outlined"
+                        onClick={() => {
+                          setSelectedIds([selectedRow.id]);
+                          setIsDeleteModalOpen(true);
+                        }}
+                      >
+                        삭제
+                      </Button>
+                    )}
                   </>
                 )}
               </Box>
@@ -641,21 +815,31 @@ export default function QuestionBoard() {
                             >
                               {answer.teacherName || "이름 없음"}
                             </Typography>
-                            <Box sx={{ display: "flex", gap: 1 }}>
-                              <Button
-                                size="small"
-                                onClick={() => handleStartAnswerEdit(answer)}
-                              >
-                                <EditIcon fontSize="small" />
-                              </Button>
-                              <Button
-                                size="small"
-                                onClick={() => handleAnswerDelete(answer.id)}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </Button>
-                            </Box>
+
+                            {canManageAnswers() && (
+                              <>
+                                <Box sx={{ display: "flex", gap: 1 }}>
+                                  <Button
+                                    size="small"
+                                    onClick={() =>
+                                      handleStartAnswerEdit(answer)
+                                    }
+                                  >
+                                    <EditIcon fontSize="small" />
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    onClick={() =>
+                                      handleAnswerDelete(answer.id)
+                                    }
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </Button>
+                                </Box>
+                              </>
+                            )}
                           </Box>
+
                           <Typography
                             sx={{ fontSize: "14px", whiteSpace: "pre-wrap" }}
                           >
@@ -669,30 +853,32 @@ export default function QuestionBoard() {
               </Box>
 
               {/* 답변 작성 */}
-              <Box sx={{ marginTop: "40px" }}>
-                <Typography variant="h6" sx={{ marginBottom: 2 }}>
-                  답변 작성
-                </Typography>
-                <TextField
-                  fullWidth
-                  value={newAnswer}
-                  onChange={(e) => setNewAnswer(e.target.value)}
-                  placeholder="답변을 입력하세요"
-                  multiline
-                  minRows={3}
-                />
-                <Box
-                  sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}
-                >
-                  <Button
-                    variant="contained"
-                    onClick={handleAnswerSubmit}
-                    sx={{ backgroundColor: "#34495e" }}
+              {(type === "ROLE_ADMIN" || type === "ROLE_TEACHER") && (
+                <Box sx={{ marginTop: "40px" }}>
+                  <Typography variant="h6" sx={{ marginBottom: 2 }}>
+                    답변 작성
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    value={newAnswer}
+                    onChange={(e) => setNewAnswer(e.target.value)}
+                    placeholder="답변을 입력하세요"
+                    multiline
+                    minRows={3}
+                  />
+                  <Box
+                    sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}
                   >
-                    답변 등록
-                  </Button>
+                    <Button
+                      variant="contained"
+                      onClick={handleAnswerSubmit}
+                      sx={{ backgroundColor: "#34495e" }}
+                    >
+                      답변 등록
+                    </Button>
+                  </Box>
                 </Box>
-              </Box>
+              )}
             </Box>
           ) : (
             <Typography>선택된 질문이 없습니다.</Typography>
