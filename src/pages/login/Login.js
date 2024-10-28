@@ -39,7 +39,7 @@ function Login() {
         try {
 
           const response = await axios.post(
-            "http://localhost:8080/api/auth/refresh",
+            "http://default-back-service-e27ef-100126159-b0eb9aec7a73.kr.lb.naverncp.com:8080/api/auth/refresh",
             {
               value: refreshToken,
             },
@@ -124,7 +124,7 @@ function Login() {
             width: "100%",
           }}
         >
-            <Router></Router>
+          <Router></Router>
         </Box>
       ) : (
         <Box

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: clazz-bridge-service
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80          # 서비스의 외부 포트
+      targetPort: 3000    # 컨테이너의 포트
+  selector:
+    app: clazz-bridge      # Deployment에서 설정한 라벨과 일치해야 함
