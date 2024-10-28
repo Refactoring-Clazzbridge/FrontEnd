@@ -31,6 +31,7 @@ import Privatechat from "../pages/chat/Privatechat";
 
 // 캘린더 페이지
 import Calendar from "../pages/calendar/Calendars";
+import QuestionList from "../pages/qna/QuestionListDataGrid";
 
 // 유저관리
 import MemberManager from "../pages/manager/MemberManager";
@@ -63,7 +64,7 @@ const Router = ({ isLoggedIn }) => {
         {/* 강의실 페이지 */}
         <Route path="lectureroom" element={<LectureRoom />} />
         <Route path="assignment" element={<Assignment />} />
-        <Route path="qna" element={<Qna />} />
+        <Route path="qna" element={<QuestionList />} />
         <Route path="vote" element={<Vote />} />
 
         {/* 채팅 페이지 */}

@@ -15,6 +15,7 @@ export const UserProvider = ({ children }) => {
   useEffect(() => {
     // userInfo가 변경될 때마다 로컬 스토리지에 저장
     if (userInfo) {
+      console.log(userInfo);
       localStorage.setItem("userInfo", JSON.stringify(userInfo));
     } else {
       localStorage.removeItem("userInfo"); // userInfo가 null일 경우 로컬 스토리지에서 제거

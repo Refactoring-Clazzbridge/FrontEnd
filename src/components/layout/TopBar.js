@@ -28,6 +28,7 @@ import Stack from "@mui/material/Stack";
 import Tooltip, { tooltipClasses } from "@mui/material/Tooltip";
 import { GitHub } from "@mui/icons-material";
 import { UserContext } from "../../context/UserContext";
+import apiClient from "../../shared/apiClient"; // default로 가져오기
 
 const drawerWidth = 240;
 const closedDrawerWidth = 64; // 슬라이드바가 닫혔을 때의 넓이
@@ -161,11 +162,32 @@ const TopBar = ({ open }) => {
     navigate("/PasswordCheck");
   };
 
-  const handleLogoutClick = () => {
+  const handleLogoutClick = async () => {
+    if (!userInfo || !userInfo.member || !userInfo.member.id) {
+      console.error("Member ID is missing or invalid.");
+      return;
+    }
+
+    const memberId = userInfo.member.id.toString(); // Long 타입의 고유 ID를 String으로 변환
+
+    // 좌석 상태를 오프라인으로 업데이트하는 요청 보내기
+    try {
+      await apiClient.post("/logout", { memberId });
+      console.log("좌석 상태를 오프라인으로 업데이트 완료");
+    } catch (error) {
+      console.error("좌석 상태 업데이트 중 오류 발생:", error);
+    }
+
+    // 좌석 정보를 localStorage에서 삭제
+    // localStorage.removeItem("userHasSeat");
+
+    // 기존 로그아웃 프로세스 진행
     localStorage.removeItem("token");
     localStorage.removeItem("userInfo");
     Cookies.remove("refreshToken");
-    console.log("토큰 제거 ", localStorage.getItem("token"));
+    console.log("토큰 제거 완료", localStorage.getItem("token"));
+
+    // 페이지를 새로 고치거나 로그인 화면으로 이동
     window.location.reload();
   };
 
