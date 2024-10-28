@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Button, Modal, Typography, TextField, Box, Drawer, Radio, RadioGroup, FormControlLabel } from "@mui/material";
+import { Button, Modal, Typography, TextField, Box, Radio, RadioGroup, FormControlLabel } from "@mui/material";
 import moment from 'moment';
 import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
@@ -9,11 +9,11 @@ import { v4 as uuidv4 } from 'uuid'; // 고유한 ID를 생성하기 위해 uuid
 import CustomSnackbar from "../../components/common/CustomSnackbar"; // 커스텀 스낵바
 
 const Vote = () => {
-	const [open, setOpen] = useState('');
+    const [open, setOpen] = useState('');
     const [selectedVotes, setSelectedVotes] = useState([]); // 선택한 투표(전체) 상태 관리
 
-	// 폼 입력 상태 관리
-	const [newEventTitle, setNewEventTitle] = useState('');
+    // 폼 입력 상태 관리
+    const [newEventTitle, setNewEventTitle] = useState('');
     const [newEventDescription, setNewEventDescription] = useState('');
     const [newEventStart, setNewEventStart] = useState(moment());
     const [newEventEnd, setNewEventEnd] = useState(moment().add(1, 'hour'));
@@ -21,53 +21,88 @@ const Vote = () => {
 
     const [events, setEvents] = useState('');
     const [courseOption, setCourseOption] = useState('');
+    //const [courseCheck, setCourseCheck] = useState('');
 
     const [openModalVoteInfo, setOpenModalVoteInfo] = useState(false); // Drawer 열기/닫기 상태
     const [selectedVote, setSelectedVote] = useState(null); // 선택된 투표
     const [voteInfo, setVoteInfo] = useState(null); // Fetch된 투표 상세 정보 상태 관리
     const [selectedOption, setSelectedOption] = useState(null); // 첫 번째 옵션의 ID로 초기화
 
-	const [dateError, setDateError] = useState("");
+    const [dateError, setDateError] = useState("");
 
-	const [openSnackbar, setOpenSnackbar] = useState(false); // 스낵바 열기 상태
-	const [snackbarMessage, setSnackbarMessage] = useState(""); // 스낵바 메시지
-	const [snackbarSeverity, setSnackbarSeverity] = useState("success"); // 스낵바 성공/실패 유무
-	const handleCloseSnackbar = () => {
-		setOpenSnackbar(false); // 스낵바 닫기
+    const [openSnackbar, setOpenSnackbar] = useState(false); // 스낵바 열기 상태
+    const [snackbarMessage, setSnackbarMessage] = useState(""); // 스낵바 메시지
+    const [snackbarSeverity, setSnackbarSeverity] = useState("success"); // 스낵바 성공/실패 유무
+    const handleCloseSnackbar = () => {
+        setOpenSnackbar(false); // 스낵바 닫기
+    };
+    const role = localStorage.getItem('membertype');
+
+    const renderButtons = () => {
+        if (role === 'ROLE_TEACHER') {
+            return (
+                <>
+                    <Button variant="outlined" onClick={handleOpen} style={{ marginRight: '6px' }}>
+                        투표 등록
+                    </Button>
+                    <Button variant="outlined" onClick={deleteSelectedVote}>
+                        삭제
+                    </Button>
+                </>
+            );
+        } else if (role === 'ROLE_ADMIN') {
+            return (
+                <Button variant="outlined" onClick={deleteSelectedVote}>
+                    삭제
+                </Button>
+            );
+        }
+        // ROLE_STUDENT는 아무 버튼도 표시되지 않음
+        return null;
     };
 
-	useEffect(() => {
-		fetchEvents();
+    useEffect(() => {
+        fetchEvents();
         fetchCourse();
         if (selectedVote) {
-        fetchVoteInfo(selectedVote.id);
-    }
+            fetchVoteInfo(selectedVote.id);
+        }
         //fetchVote();
     }, [selectedVote]); // 2번째 인수에 빈 배열을 줘서 한 번만 실행
 
-	const fetchEvents = () => {
-		apiClient.get('vote')
-			.then(response => {
-				const fetchedEvents = response.data.map((event) => ({
+    const fetchEvents = () => {
+        apiClient.get('vote')
+            .then(response => {
+                const fetchedEvents = response.data.map((event) => ({
                     ...event,
                     isExpired: event.isExpired ? '투표 마감' : '투표 중', // 표시용 변환
-				}));
-				setEvents(fetchedEvents); // 상태 업데이트
-			})
-			.catch(error => {
-				console.error('이벤트 데이터를 불러오지 못했습니다.', error);
-			});
-	};
+                }));
+                setEvents(fetchedEvents); // 상태 업데이트
+            })
+            .catch(error => {
+                console.error('이벤트 데이터를 불러오지 못했습니다.', error);
+            });
+    };
 
-	const fetchCourse = () => {
-		// 강의명 목록을 가져오는 API 호출
-		apiClient.get('course/title')
-			.then(response => {
-				setCourseOption(response.data); // 강의명 목록 설정
-			})
-			.catch(error => {
-				console.error('강의명 목록을 불러오지 못했습니다.', error);
-			});
+    //const fetchCourseCheck = (id) => {
+    //    apiClient.get(`user/check/${id}`)
+    //        .then(response => {
+    //            setCourseCheck(response.data); // 강의명 체크
+    //        })
+    //        .catch(error => {
+    //            console.error('강의명 체크를 못했습니다.', error);
+    //        });
+    //};
+
+    const fetchCourse = () => {
+        // 강의명 목록을 가져오는 API 호출
+        apiClient.get('course/title')
+            .then(response => {
+                setCourseOption(response.data); // 강의명 목록 설정
+            })
+            .catch(error => {
+                console.error('강의명 목록을 불러오지 못했습니다.', error);
+            });
     };
 
     const handleRowClick = (params) => {
@@ -78,12 +113,19 @@ const Vote = () => {
 
     // 투표 제출
     const handleVoteSubmit = () => {
+        if (!selectedVote.isExpired) {
+            setSnackbarMessage('투표 기간이 만료된 투표입니다.');
+            setSnackbarSeverity('error');
+            setOpenSnackbar(true);
+            return; // 함수 종료
+        }
+
         if (selectedOption) {
             // 서버로 선택된 옵션을 전송
             apiClient.put(`vote/${selectedVote.id}/submit`, {
-                voteId: selectedVote.id, // 추가: 투표 ID 
-                voteOptionId: selectedOption // 추가: 선택된 옵션 ID
-             })
+                voteId: selectedVote.id,
+                voteOptionId: selectedOption
+            })
                 .then(() => {
                     setSnackbarMessage('투표가 성공적으로 제출되었습니다.');
                     setSnackbarSeverity('success');
@@ -105,25 +147,48 @@ const Vote = () => {
     };
 
     const fetchVoteInfo = (id) => {
-        apiClient.get(`vote/detail/${id}`) 
+        apiClient.get(`vote/detail/${id}`)
             .then(response => {
                 console.log('API Response:', response.data);
-                setVoteInfo(response.data); 
-                setSelectedOption(''); 
+
+                const voteOptions = response.data.voteOptionInfoList;
+
+                // rank 값을 업데이트하는 함수
+                const updateRanks = (options) => {
+                    const sortedOptions = options
+                        .slice() // 원본 배열을 변경하지 않기 위해 복사
+                        .sort((a, b) => Number(b.votes) - Number(a.votes));
+
+                    // 새로운 rank 값을 할당
+                    sortedOptions.forEach((option, index) => {
+                        option.rank = index + 1; // 1부터 시작하는 순위
+                    });
+
+                    return sortedOptions;
+                };
+
+                // rank 값을 업데이트하고 상태에 반영
+                response.data.voteOptionInfoList = updateRanks(voteOptions);
+
+
+                setVoteInfo(response.data);
+                setSelectedOption('');
+
             })
             .catch(error => {
                 console.error('투표 상세 정보를 불러오지 못했습니다.', error);
             });
     };
 
-	// 폼 초기화
+
+    // 폼 초기화
     const resetForm = () => {
-		setNewEventTitle('');
-		setNewEventDescription('');
-		setNewEventStart(moment());
+        setNewEventTitle('');
+        setNewEventDescription('');
+        setNewEventStart(moment());
         setNewEventEnd(moment().add(30, 'minute'));
         setNewEventOptionText(['']);
-	};
+    };
 
     // 모달 열기 및 닫기
     const handleOpen = () => {
@@ -131,9 +196,9 @@ const Vote = () => {
         setOpen(true);
     };
 
-	const handleClose = () => {
-		setOpen(false);
-		resetForm();
+    const handleClose = () => {
+        setOpen(false);
+        resetForm();
     };
 
     // 옵션 추가 함수
@@ -147,87 +212,87 @@ const Vote = () => {
         setNewEventOptionText(updatedOptionText);
     };
 
-	// 신규 투표 추가
-	const addVote = (newVote) => {
-		apiClient.post('vote', newVote) // ID 없이 투표 추가
-			.then(response => {
-				const addedVote = {
-					...response.data,
-					id: response.data.id || uuidv4(), // 서버가 `id`를 주지 않으면 클라이언트에서 임시로 생성
-				};
-                setEvents([addedVote, ...events]); // 응답으로 받은 새 투표 추가
-				setSnackbarMessage('투표가 추가되었습니다.');
-				setSnackbarSeverity('success');
-				setOpenSnackbar(true);
-				handleClose();
-				fetchEvents(); // 추가 후 이벤트 목록 새로 고침
-			})
+    // 신규 투표 추가
+    const addVote = (newVote) => {
+        apiClient.post('vote', newVote) // ID 없이 투표 추가
+            .then(response => {
+                const addedVote = {
+                    ...response.data,
+                    id: response.data.id || uuidv4(), // 서버가 `id`를 주지 않으면 클라이언트에서 임시로 생성
+                };
+                setEvents([...events, addedVote]); // 응답으로 받은 새 투표 추가
+                setSnackbarMessage('투표가 추가되었습니다.');
+                setSnackbarSeverity('success');
+                setOpenSnackbar(true);
+                handleClose();
+                fetchEvents(); // 추가 후 이벤트 목록 새로 고침
+            })
             .catch(error => {
                 console.log(newVote);
-				console.error('투표 추가에 실패했습니다.', error);
-			});
-	};
+                console.error('투표 추가에 실패했습니다.', error);
+            });
+    };
 
-	const handleSaveEvent = () => {
-		const newVote = {
-			title: newEventTitle,
-			description: newEventDescription,
+    const handleSaveEvent = () => {
+        const newVote = {
+            title: newEventTitle,
+            description: newEventDescription,
             startDate: newEventStart.format('YYYY-MM-DDTHH:mm'),
             endDate: newEventEnd.format('YYYY-MM-DDTHH:mm'),
             optionText: newEventOptionText,
-		};
+        };
 
-		// 날짜 에러 메시지 띄우기
-		if (newEventStart.isAfter(newEventEnd)) {
-			setDateError("종료 날짜는 시작 날짜 이후여야 합니다.");
-			return;
-		}
+        // 날짜 에러 메시지 띄우기
+        if (newEventStart.isAfter(newEventEnd)) {
+            setDateError("종료 날짜는 시작 날짜 이후여야 합니다.");
+            return;
+        }
 
-		setDateError('');
+        setDateError('');
 
-		addVote(newVote);
+        addVote(newVote);
 
-	};
+    };
 
-	const deleteSelectedVote = () => {
-		// 선택된 투표 수를 확인
-		const voteCount = selectedVotes.length;
+    const deleteSelectedVote = () => {
+        // 선택된 투표 수를 확인
+        const voteCount = selectedVotes.length;
 
-		if (voteCount === 0) {
-			setSnackbarMessage("삭제할 투표를 선택하세요.");
-			setSnackbarSeverity("error"); // 실패 스낵바
-			setOpenSnackbar(true);
-			return;
-		}
+        if (voteCount === 0) {
+            setSnackbarMessage("삭제할 투표를 선택하세요.");
+            setSnackbarSeverity("error"); // 실패 스낵바
+            setOpenSnackbar(true);
+            return;
+        }
 
-		const confimation = window.confirm(`선택된 투표 ${voteCount}개를 삭제하시겠습니까?`); // window.confirm 팝업창
+        const confimation = window.confirm(`선택된 투표 ${voteCount}개를 삭제하시겠습니까?`); // window.confirm 팝업창
 
-		if (confimation) {
-			const deletePromises = selectedVotes.map(id => {
-				console.log("Delete vote with ID:", id); // 삭제할 voteId 확인
-				return apiClient.delete(`vote/${id}`);
-			});
+        if (confimation) {
+            const deletePromises = selectedVotes.map(id => {
+                console.log("Delete vote with ID:", id); // 삭제할 voteId 확인
+                return apiClient.delete(`vote/${id}`);
+            });
 
-			Promise.all(deletePromises)
-				.then(() => {
-					const updatedEvents = events.filter(event => !selectedVotes.includes(event.id));
-					setEvents(updatedEvents);
-					setSelectedVotes([]); // 선택한 투표 초기화
-					setSnackbarMessage(`${voteCount}개 투표를 삭제했습니다.`);
-					setSnackbarSeverity('success');
-					setOpenSnackbar(true);
-				})
-				.catch(error => {
-					console.error('투표 정보를 삭제하지 못했습니다', error.response.data);
-					setSnackbarMessage('강의 삭제 실패: ', error.response.data.message);
-					setSnackbarSeverity("error");
-					setOpenSnackbar(true);
-				});
-		} else {
-			// 사용자가 삭제를 취소했을 때의 처리
-			return;
-		}
-	};
+            Promise.all(deletePromises)
+                .then(() => {
+                    const updatedEvents = events.filter(event => !selectedVotes.includes(event.id));
+                    setEvents(updatedEvents);
+                    setSelectedVotes([]); // 선택한 투표 초기화
+                    setSnackbarMessage(`${voteCount}개 투표를 삭제했습니다.`);
+                    setSnackbarSeverity('success');
+                    setOpenSnackbar(true);
+                })
+                .catch(error => {
+                    console.error('투표 정보를 삭제하지 못했습니다', error.response.data);
+                    setSnackbarMessage('강의 삭제 실패: ', error.response.data.message);
+                    setSnackbarSeverity("error");
+                    setOpenSnackbar(true);
+                });
+        } else {
+            // 사용자가 삭제를 취소했을 때의 처리
+            return;
+        }
+    };
 
     return (
         <LocalizationProvider dateAdapter={AdapterMoment}>
@@ -350,12 +415,7 @@ const Vote = () => {
 
                 {/* 등록, 수정, 삭제 버튼 */}
                 <Box mt={2} sx={{ display: "flex", justifyContent: "flex-end" }}>
-                    <Button variant="outlined" onClick={handleOpen} sx={{ mr: 2 }}>
-                        투표 등록
-                    </Button>
-                    <Button variant="outlined" onClick={deleteSelectedVote}>
-                        투표 삭제
-                    </Button>
+                    {renderButtons()} {/* renderButtons 함수 호출 */}
                 </Box>
 
                 <Modal open={openModalVoteInfo} onClose={() => setOpenModalVoteInfo(false)}>
@@ -373,38 +433,43 @@ const Vote = () => {
                         {voteInfo ? (
                             <>
                                 <Typography variant="h6" gutterBottom>
-                                    {voteInfo.voteTitle} (상태: {voteInfo.isExpired ? '종료' : '진행중'})
+                                    제목: {voteInfo.voteTitle} ({voteInfo.isExpired ? '투표 종료' : '투표 진행중'})
                                 </Typography>
-                                <Typography variant="body1" gutterBottom>
-                                    {voteInfo.description}
+                                <Typography variant="body1" gutterBottom style={{ marginBottom:'6px' }}>
+                                    투표 주제: {voteInfo.description}
                                 </Typography>
                                 <Typography variant="h6" gutterBottom>
-                                    옵션
+                                    투표 항목
                                 </Typography>
                                 {voteInfo.voteOptionInfoList && voteInfo.voteOptionInfoList.length > 0 ? (
                                     <RadioGroup
-                                        value={selectedOption}
+                                        value={selectedOption || ''} // 상태가 undefined일 경우를 대비하여 빈 문자열로 설정
                                         onChange={(e) => {
-                                            const selectedValue = Number(e.target.value); // 선택된 값을 Long 타입으로 변환
-                                            console.log(selectedValue); // 선택된 값 확인
+                                            const selectedValue = Number(e.target.value); // 여기서 target을 사용해보세요
+                                            console.log("선택된 값:", Number(e.target.value)); // 선택된 값 확인
+
                                             setSelectedOption(selectedValue); // 상태 업데이트
                                         }}
                                     >
                                         {voteInfo.voteOptionInfoList.map((option) => (
                                             <FormControlLabel
-                                                key={option.id} // 고유한 키
-                                                value={option.id} // 라디오 버튼의 value를 ID로 설정
-                                                control={<Radio />}
+                                                key={option.rank} // 고유한 키
+                                                value={option.rank} // 라디오 버튼의 value를 ID로 설정
+                                                control={<Radio disabled={role === 'ROLE_ADMIN' || role === 'ROLE_TEACHER'} />} // ROLE_ADMIN의 경우 비활성화
                                                 label={`${option.optionText} (현재 점유율: ${option.occupancyRate}, 투표 수: ${option.votes})`}
                                             />
                                         ))}
                                     </RadioGroup>
+
                                 ) : (
                                     <Typography variant="body1">옵션이 없습니다.</Typography> // 옵션이 없을 때 메시지
                                 )}
-                                <Button variant="outlined" onClick={handleVoteSubmit} style={{ marginTop:'6px', marginRight:'8px' }}>
-                                    투표하기
-                                </Button>
+                                {/* 투표 버튼은 ROLE_ADMIN의 경우 표시하지 않음 */}
+                                {role !== ('ROLE_ADMIN' && 'ROLE_TEACHER') && (
+                                    <Button variant="outlined" onClick={handleVoteSubmit} style={{ marginTop: '6px', marginRight: '8px' }}>
+                                        투표하기
+                                    </Button>
+                                )}
                             </>
                         ) : (
                             <Typography variant="body1">투표 정보를 불러오는 중...</Typography>
@@ -471,7 +536,7 @@ const Vote = () => {
                                 onChange={(e) => {
                                     setNewEventTitle(e.target.value);
                                 }}
-                                style={{ marginTop: '16px'}}
+                                style={{ marginTop: '16px' }}
                             />
                         </Box>
                         <Box sx={{ display: "grid" }}>
