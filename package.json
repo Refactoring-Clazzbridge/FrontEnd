@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@date-io/date-fns": "^3.0.0",
     "@emotion/react": "^11.13.3",
     "@emotion/styled": "^11.13.0",
     "@fontsource/roboto": "^5.0.15",
@@ -22,6 +21,7 @@
     "@types/dompurify": "^3.0.5",
     "axios": "^1.7.7",
     "cors": "^2.8.5",
+    "date-fns": "^2.29.3",
     "dompurify": "^3.1.7",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
