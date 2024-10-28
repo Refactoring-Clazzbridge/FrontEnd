@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Button, Modal, Typography, TextField, Box, FormControl, InputLabel, Select, MenuItem, IconButton, Radio, RadioGroup, FormControlLabel } from "@mui/material";
+import { Button, Modal, Typography, TextField, Box, Drawer, Radio, RadioGroup, FormControlLabel } from "@mui/material";
 import moment from 'moment';
 import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
@@ -10,18 +10,22 @@ import CustomSnackbar from "../../components/common/CustomSnackbar"; // 커스�
 
 const Vote = () => {
 	const [open, setOpen] = useState('');
-	const [selectedEvent, setSelectedEvent] = useState(null);
-	const [selectedVotes, setSelectedVotes] = useState([]); // 선택한 투표 상태 관리
+    const [selectedVotes, setSelectedVotes] = useState([]); // 선택한 투표(전체) 상태 관리
 
 	// 폼 입력 상태 관리
-	const [newEventId, setNewEventId] = useState(''); 
 	const [newEventTitle, setNewEventTitle] = useState('');
     const [newEventDescription, setNewEventDescription] = useState('');
     const [newEventStart, setNewEventStart] = useState(moment());
     const [newEventEnd, setNewEventEnd] = useState(moment().add(1, 'hour'));
+    const [newEventOptionText, setNewEventOptionText] = useState(['']); // 초기값으로 빈 문자열을 가진 배열
 
-	const [events, setEvents] = useState('');
-	const [courseOption, setCourseOption] = useState('');
+    const [events, setEvents] = useState('');
+    const [courseOption, setCourseOption] = useState('');
+
+    const [openModalVoteInfo, setOpenModalVoteInfo] = useState(false); // Drawer 열기/닫기 상태
+    const [selectedVote, setSelectedVote] = useState(null); // 선택된 투표
+    const [voteInfo, setVoteInfo] = useState(null); // Fetch된 투표 상세 정보 상태 관리
+    const [selectedOption, setSelectedOption] = useState(null); // 첫 번째 옵션의 ID로 초기화
 
 	const [dateError, setDateError] = useState("");
 
@@ -34,15 +38,19 @@ const Vote = () => {
 
 	useEffect(() => {
 		fetchEvents();
-		fetchCourse();
-	}, []); // 2번째 인수에 빈 배열을 줘서 한 번만 실행
+        fetchCourse();
+        if (selectedVote) {
+        fetchVoteInfo(selectedVote.id);
+    }
+        //fetchVote();
+    }, [selectedVote]); // 2번째 인수에 빈 배열을 줘서 한 번만 실행
 
 	const fetchEvents = () => {
 		apiClient.get('vote')
 			.then(response => {
 				const fetchedEvents = response.data.map((event) => ({
                     ...event,
-                    isExpired: event.isExpired ? '투표 중' : '투표 마감', // 표시용 변환
+                    isExpired: event.isExpired ? '투표 마감' : '투표 중', // 표시용 변환
 				}));
 				setEvents(fetchedEvents); // 상태 업데이트
 			})
@@ -60,19 +68,65 @@ const Vote = () => {
 			.catch(error => {
 				console.error('강의명 목록을 불러오지 못했습니다.', error);
 			});
-	};
+    };
+
+    const handleRowClick = (params) => {
+        setSelectedVote(params.row); // 선택된 투표 저장
+        fetchVoteInfo(params.row.id); // 선택된 투표의 ID를 사용하여 투표 상세 정보 가져오기
+        setOpenModalVoteInfo(true); // Drawer 열기
+    };
+
+    // 투표 제출
+    const handleVoteSubmit = () => {
+        if (selectedOption) {
+            // 서버로 선택된 옵션을 전송
+            apiClient.put(`vote/${selectedVote.id}/submit`, {
+                voteId: selectedVote.id, // 추가: 투표 ID 
+                voteOptionId: selectedOption // 추가: 선택된 옵션 ID
+             })
+                .then(() => {
+                    setSnackbarMessage('투표가 성공적으로 제출되었습니다.');
+                    setSnackbarSeverity('success');
+                    setOpenSnackbar(true);
+                    setOpenModalVoteInfo(false); // Drawer 닫기
+                })
+                .catch(error => {
+                    console.error('투표 제출 실패:', error);
+                    console.log(selectedOption);
+                    setSnackbarMessage('투표 제출에 실패했습니다.');
+                    setSnackbarSeverity('error');
+                    setOpenSnackbar(true);
+                });
+        } else {
+            setSnackbarMessage('옵션을 선택하세요.');
+            setSnackbarSeverity('warning');
+            setOpenSnackbar(true);
+        }
+    };
+
+    const fetchVoteInfo = (id) => {
+        apiClient.get(`vote/detail/${id}`) 
+            .then(response => {
+                console.log('API Response:', response.data);
+                setVoteInfo(response.data); 
+                setSelectedOption(''); 
+            })
+            .catch(error => {
+                console.error('투표 상세 정보를 불러오지 못했습니다.', error);
+            });
+    };
 
 	// 폼 초기화
-	const resetForm = () => {
+    const resetForm = () => {
 		setNewEventTitle('');
 		setNewEventDescription('');
 		setNewEventStart(moment());
-		setNewEventEnd(moment().add(30, 'minute'));
+        setNewEventEnd(moment().add(30, 'minute'));
+        setNewEventOptionText(['']);
 	};
 
     // 모달 열기 및 닫기
     const handleOpen = () => {
-        setSelectedEvent(null);
         resetForm();
         setOpen(true);
     };
@@ -80,7 +134,18 @@ const Vote = () => {
 	const handleClose = () => {
 		setOpen(false);
 		resetForm();
-	};
+    };
+
+    // 옵션 추가 함수
+    const handleAddOptionText = () => {
+        setNewEventOptionText([...newEventOptionText, '']); // 새 옵션 추가
+    };
+
+    // 옵션 삭제 함수
+    const handleDeleteOptionText = (index) => {
+        const updatedOptionText = newEventOptionText.filter((_, i) => i !== index); // 특정 인덱스 삭제
+        setNewEventOptionText(updatedOptionText);
+    };
 
 	// 신규 투표 추가
 	const addVote = (newVote) => {
@@ -90,7 +155,7 @@ const Vote = () => {
 					...response.data,
 					id: response.data.id || uuidv4(), // 서버가 `id`를 주지 않으면 클라이언트에서 임시로 생성
 				};
-				setEvents([...events, addedVote]); // 응답으로 받은 새 투표 추가
+                setEvents([addedVote, ...events]); // 응답으로 받은 새 투표 추가
 				setSnackbarMessage('투표가 추가되었습니다.');
 				setSnackbarSeverity('success');
 				setOpenSnackbar(true);
@@ -109,6 +174,7 @@ const Vote = () => {
 			description: newEventDescription,
             startDate: newEventStart.format('YYYY-MM-DDTHH:mm'),
             endDate: newEventEnd.format('YYYY-MM-DDTHH:mm'),
+            optionText: newEventOptionText,
 		};
 
 		// 날짜 에러 메시지 띄우기
@@ -263,6 +329,7 @@ const Vote = () => {
                             { field: 'endDate', headerName: '종료 날짜', flex: 1.3, renderCell: (params) => moment(params.value).format('YYYY-MM-DD HH:mm') },
                             { field: 'isExpired', headerName: '투표 여부', flex: 1.3 },
                         ]}
+                        onRowClick={handleRowClick} // 행 클릭 시 이벤트
                         initialState={{
                             pagination: {
                                 paginationModel: {
@@ -290,6 +357,60 @@ const Vote = () => {
                         투표 삭제
                     </Button>
                 </Box>
+
+                <Modal open={openModalVoteInfo} onClose={() => setOpenModalVoteInfo(false)}>
+                    <Box sx={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: 400,
+                        bgcolor: 'background.paper',
+                        p: 4,
+                        borderRadius: '4px',
+                        boxShadow: 24,
+                    }}>
+                        {voteInfo ? (
+                            <>
+                                <Typography variant="h6" gutterBottom>
+                                    {voteInfo.voteTitle} (상태: {voteInfo.isExpired ? '종료' : '진행중'})
+                                </Typography>
+                                <Typography variant="body1" gutterBottom>
+                                    {voteInfo.description}
+                                </Typography>
+                                <Typography variant="h6" gutterBottom>
+                                    옵션
+                                </Typography>
+                                {voteInfo.voteOptionInfoList && voteInfo.voteOptionInfoList.length > 0 ? (
+                                    <RadioGroup
+                                        value={selectedOption}
+                                        onChange={(e) => {
+                                            const selectedValue = Number(e.target.value); // 선택된 값을 Long 타입으로 변환
+                                            console.log(selectedValue); // 선택된 값 확인
+                                            setSelectedOption(selectedValue); // 상태 업데이트
+                                        }}
+                                    >
+                                        {voteInfo.voteOptionInfoList.map((option) => (
+                                            <FormControlLabel
+                                                key={option.id} // 고유한 키
+                                                value={option.id} // 라디오 버튼의 value를 ID로 설정
+                                                control={<Radio />}
+                                                label={`${option.optionText} (현재 점유율: ${option.occupancyRate}, 투표 수: ${option.votes})`}
+                                            />
+                                        ))}
+                                    </RadioGroup>
+                                ) : (
+                                    <Typography variant="body1">옵션이 없습니다.</Typography> // 옵션이 없을 때 메시지
+                                )}
+                                <Button variant="outlined" onClick={handleVoteSubmit} style={{ marginTop:'6px', marginRight:'8px' }}>
+                                    투표하기
+                                </Button>
+                            </>
+                        ) : (
+                            <Typography variant="body1">투표 정보를 불러오는 중...</Typography>
+                        )}
+                    </Box>
+                </Modal>
 
                 {/* 모달 */}
                 <Modal
@@ -350,6 +471,7 @@ const Vote = () => {
                                 onChange={(e) => {
                                     setNewEventTitle(e.target.value);
                                 }}
+                                style={{ marginTop: '16px'}}
                             />
                         </Box>
                         <Box sx={{ display: "grid" }}>
@@ -365,6 +487,27 @@ const Vote = () => {
                                 rows={4}   // 표시할 줄 수 (필요에 따라 조정 가능)
                             />
                         </Box>
+                        {/* 옵션 입력 필드 */}
+                        {newEventOptionText.map((option, index) => (
+                            <Box key={index} sx={{ display: 'flex', alignItems: 'center', marginBottom: '8px', marginTop: '14px' }}>
+                                <TextField
+                                    label={`옵션 ${index + 1}`}
+                                    value={option}
+                                    onChange={(e) => {
+                                        const updatedOptionText = [...newEventOptionText];
+                                        updatedOptionText[index] = e.target.value; // 값 변경
+                                        setNewEventOptionText(updatedOptionText);
+                                    }}
+                                    style={{ marginRight: '10px' }}
+                                />
+                                <Button variant="outlined" color="error" onClick={() => handleDeleteOptionText(index)}>
+                                    삭제
+                                </Button>
+                            </Box>
+                        ))}
+                        <Button variant="outlined" onClick={handleAddOptionText}>
+                            옵션 추가
+                        </Button>
 
                         {/* 저장 및 취소 버튼 */}
                         <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 3 }}>
