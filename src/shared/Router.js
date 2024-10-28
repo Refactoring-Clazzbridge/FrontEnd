@@ -25,7 +25,7 @@ import Qna from "../pages/lectureRoom/Qna";
 import Vote from "../pages/lectureRoom/Vote";
 
 // 채팅 페이지
-import Chat from "../pages/chat/Chat";
+import Chat from "../pages/chat/MuiChat";
 import Allchat from "../pages/chat/Allchat";
 import Privatechat from "../pages/chat/Privatechat";
 
@@ -38,6 +38,7 @@ import ClassroomManager from "../pages/manager/ClassroomManager";
 import CourseManager from "../pages/manager/CourseManager";
 
 const Router = ({ isLoggedIn }) => {
+  console.log("router, ", isLoggedIn);
   return (
     <Routes>
       <Route element={<LayoutWrapper />}>
