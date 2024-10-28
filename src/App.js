@@ -5,6 +5,7 @@ import Login from "./pages/login/Login";
 import Router from "./shared/Router";
 import { UserProvider } from "./context/UserContext";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
+import "quill/dist/quill.snow.css"; // Quill 기본 스타일
 
 const theme = createTheme({
   typography: {
