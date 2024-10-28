@@ -20,18 +20,18 @@ function App() {
     setIsLoggedIn(true);
   };
 
-  useEffect(() => {
-    console.log("isLoggedIn 상태 변경:", isLoggedIn);
-  }, [isLoggedIn]);
+  // useEffect(() => {
+  //   console.log("isLoggedIn 상태 변경:", isLoggedIn);
+  // }, [isLoggedIn]);
+
+  console.log("App.js, ", isLoggedIn);
 
   return (
     <ThemeProvider theme={theme}>
       <UserProvider>
         <SidebarProvider>
           {isLoggedIn ? (
-
               <Router /> // 로그인 후 Router 화면
-
           ) : (
             <Login /> // Login 컴포넌트
           )}

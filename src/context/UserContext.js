@@ -4,7 +4,7 @@ import React, { createContext, useState, useEffect } from "react";
 // 초기값을 null로 설정한 Context 생성
 export const UserContext = createContext();
 
-// Provider 컴포넌트 생성
+// Provider 컴포넌트 생성ㄴ
 export const UserProvider = ({ children }) => {
   const [userInfo, setUserInfo] = useState(() => {
     // 로컬 스토리지에서 초기값 가져오기

@@ -9,20 +9,32 @@ import Grid from "@mui/material/Grid2";
 import HomeImage from "../../assets/images/homeImage6.jpeg";
 import backImage from "../../assets/images/photo_01_satur_-60.jpg";
 import logo from "../../assets/images/logo.png";
-
+import socket from "../../utils/socket";
 
 function Login() {
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(
+    !!localStorage.getItem("token")
+  );
   const navigate = useNavigate();
+
+  useEffect(() => {
+    console.log("isLoggedIn 상태 변경:", isLoggedIn);
+  }, [isLoggedIn]);
 
   useEffect(() => {
     const checkToken = async () => {
       const token = localStorage.getItem("token");
       const refreshToken = Cookies.get("refreshToken");
 
+      console.log(token);
+
       if (token && isTokenValid(token)) {
         setIsLoggedIn(true);
+        if (socket) {
+          console.log('Token updated');
+          socket.emit('token', token);
+        }
       } else if (refreshToken) {
         try {
 
@@ -37,6 +49,11 @@ function Login() {
           );
           localStorage.setItem("token", response.data.accessToken);
           setIsLoggedIn(true);
+
+          if (socket) {
+            console.log('Token updated');
+            socket.emit('token', response.data.accessToken);
+          }
         } catch (error) {
           console.error("Refresh token failed:", error);
 
@@ -76,9 +93,12 @@ function Login() {
   const handleLoginSuccess = () => {
     console.log("로그인");
     setIsLoggedIn(true);
+
+    if (socket) {
+      console.log('Token updated');
+      socket.emit('token', localStorage.getItem("token"));
+    }
   };
-
-
 
   if (isLoading) {
     return <Typography>Loading...</Typography>; // 로딩 중 메시지
@@ -104,7 +124,7 @@ function Login() {
             width: "100%",
           }}
         >
-          <Router></Router>
+            <Router></Router>
         </Box>
       ) : (
         <Box

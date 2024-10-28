@@ -6,6 +6,7 @@ import AvatarWithStatus from './AvatarWithStatus';
 import ChatBubble from './ChatBubble';
 import MessageInput from './MessageInput';
 import MessagesPaneHeader from './MessagesPaneHeader';
+import socket from '../../utils/socket';
 
 export default function MessagesPane(props) {
   const { chat } = props;
@@ -19,14 +20,14 @@ export default function MessagesPane(props) {
   return (
       <Sheet
           sx={{
-            height: { xs: 'calc(100dvh - var(--Header-height))', md: '88dvh' },
+            height: {xs: 'calc(100dvh - var(--Header-height))', md: '88dvh'},
             display: 'flex',
             flexDirection: 'column',
             backgroundColor: 'background.level1',
 
           }}
       >
-        <MessagesPaneHeader sender={chat.sender} />
+        <MessagesPaneHeader sender={chat.sender}/>
         <Box
             sx={{
               display: 'flex',
@@ -39,23 +40,24 @@ export default function MessagesPane(props) {
               backgroundColor: '#f6f8fa',
             }}
         >
-          <Stack spacing={2} sx={{ justifyContent: 'flex-end' }}>
+          <Stack spacing={2} sx={{justifyContent: 'flex-end'}}>
             {chatMessages.map((message, index) => {
-              const isYou = message.sender === 'You';
+              const isYou = String(message.sender) === localStorage.getItem('userId');
               return (
                   <Stack
                       key={index}
                       direction="row"
                       spacing={2}
-                      sx={{ flexDirection: isYou ? 'row-reverse' : 'row' }}
+                      sx={{flexDirection: isYou ? 'row-reverse' : 'row'}}
                   >
-                    {message.sender !== 'You' && (
+                    {!isYou && (
                         <AvatarWithStatus
                             online={message.sender.online}
                             src={message.sender.avatar}
                         />
                     )}
-                    <ChatBubble variant={isYou ? 'sent' : 'received'} {...message} />
+                    <ChatBubble
+                        variant={isYou ? 'sent' : 'received'} {...message} />
                   </Stack>
               );
             })}
@@ -67,15 +69,17 @@ export default function MessagesPane(props) {
             onSubmit={() => {
               const newId = chatMessages.length + 1;
               const newIdString = newId.toString();
-              setChatMessages([
-                ...chatMessages,
-                {
-                  id: newIdString,
-                  sender: 'You',
-                  content: textAreaValue,
-                  timestamp: 'Just now',
-                },
-              ]);
+
+              socket.emit('newMessage', {
+                chatId: chat.id,
+                messageId: newIdString,
+                message: textAreaValue,
+              });
+
+              socket.on('newMessages', (msg) => {
+                console.log('message: ' + msg);
+                setChatMessages([...chatMessages, msg]);
+              });
               setTextAreaValue('');
             }}
         />

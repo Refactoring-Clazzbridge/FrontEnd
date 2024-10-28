@@ -1,40 +1,30 @@
 import React, { createContext, useContext, useRef, useEffect } from 'react';
 import io from 'socket.io-client';
-
-const websocketUrl = "http://localhost:3001";
+import socket from '../utils/socket';
 
 // Context 생성
 const SocketContext = createContext();
 
 // Provider 컴포넌트
-export const SocketProvider = ({children, isLoggedIn}) => {
+export const SocketProvider = ({children}) => {
   console.log("socket provider called");
-  const socket = useRef(null);
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
-    if (isLoggedIn) {
-      const token = localStorage.getItem('token');
+    console.log("socket provider useEffect called");
 
-      socket.current = io(websocketUrl);
-      socket.current.emit('connected', token);
+      socket.emit('connected', token);
       console.log('WebSocket connected');
 
-      socket.current.on('initError', errorMessage => {
+      socket.on('initError', errorMessage => {
         console.error(errorMessage);
       });
 
-      socket.current.on('initCompleted', () => {
+      socket.on('initCompleted', () => {
         console.log("socket init complete")
       });
 
-      return () => {
-        if (socket.current) {
-          socket.current.disconnect();
-          console.log('WebSocket disconnected');
-        }
-      };
-    }
-  }, [isLoggedIn]);
+  }, []);
 
   return (
       <SocketContext.Provider value={socket}>
