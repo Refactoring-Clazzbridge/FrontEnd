@@ -4,6 +4,8 @@ import { jwtDecode } from "jwt-decode";
 import { styled } from "@mui/material/styles";
 import AddIcon from "@mui/icons-material/Add";
 import MenuItem from "@mui/material/MenuItem";
+import { getStudentOnlineStatus } from "../../services/apis/seat/getOnline";
+import { updateStudentOnlineStatus } from "../../services/apis/seat/updateOnline";
 import {
   Avatar,
   Card,
@@ -84,10 +86,11 @@ function ProfileCard({
   return (
     <Card
       sx={{
-        borderRadius: "6px",
-        width: "120px",
+        marginTop: "50px",
+        borderRadius: "8px",
+        width: "150px",
         textAlign: "center",
-        height: "90px",
+        height: "110px",
         boxShadow: isSelf
           ? "0 1px 0px rgba(0, 0, 0, 0.2)"
           : "0 1px 0px rgba(0, 0, 0, 0.1)",
@@ -149,16 +152,16 @@ function ProfileCard({
             padding: "0px",
             marginLeft: "-9px",
             marginRight: "-9px",
-            top: "-9px",
-            height: "20px",
+            top: "-6px",
+            height: "24px",
           }}
         >
           <Typography
             sx={{
-              fontSize: "10px",
+              fontSize: "13px",
               fontWeight: "500",
               color: isGoodOnline ? "#333" : "#b0b0b0",
-              margin: "4px",
+              margin: "8px",
             }}
           >
             {`No. ${seatNumber}`}
@@ -176,14 +179,15 @@ function ProfileCard({
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
+              top: "7px",
             }}
           >
             {isEmpty && !userHasSeat && isStudent ? (
               <AddIcon
                 sx={{
                   position: "absolute",
-                  height: "20px",
-                  width: "20px",
+                  height: "29px", // 아이콘 크기 증가
+                  width: "29px",
                   color: "darkGray",
                   marginTop: "50px",
                 }}
@@ -196,12 +200,12 @@ function ProfileCard({
               >
                 <Avatar
                   sx={{
-                    width: "30px",
-                    height: "30px",
+                    width: "36px", // 아바타 크기 증가
+                    height: "36px",
                     filter: isOffline ? "grayscale(100%)" : "none",
                     cursor: "pointer",
                     border: "1px solid #ddd",
-                    boxShadow: "0 1px 2px",
+                    boxShadow: "0 1px 3px",
                   }}
                   src={imgSrc}
                   alt={`${name}'s profile`}
@@ -213,8 +217,8 @@ function ProfileCard({
         {(!isEmpty || isTeacher || isAdmin) && (
           <Typography
             sx={{
-              marginTop: "4px",
-              fontSize: "12px",
+              marginTop: "12px",
+              fontSize: "14px",
               fontWeight: "600",
               color: isGoodOnline ? "#333" : "#b0b0b0",
             }}
@@ -247,11 +251,67 @@ export default function StudentRoom() {
   const [isOnline, setIsOnline] = useState(false); // 좌석 상태 관리
 
   useEffect(() => {
-    // 컴포넌트가 마운트될 때 localStorage에서 좌석 정보를 가져옴
-    const storedSeatId = localStorage.getItem("userHasSeat");
-    if (storedSeatId) {
-      setUserSeat(storedSeatId); // 저장된 좌석 ID를 상태로 설정
+    // Load selected course from localStorage on mount
+    const storedCourseId = localStorage.getItem("selectedCourseId");
+    if (storedCourseId) {
+      setSelectedCourseId(storedCourseId);
+      fetchSeatsByCourse(storedCourseId);
     }
+
+    // Additional setup logic here...
+  }, []);
+
+  useEffect(() => {
+    // 컴포넌트가 마운트될 때 localStorage에서 좌석 정보를 가져옴
+    const storedSeatId = localStorage.getItem("seatInfo");
+    const seatData = JSON.parse(storedSeatId);
+
+    console.log(seatData.id);
+    if (seatData.id) {
+      setUserSeat(seatData.id); // 저장된 좌석 ID를 상태로 설정
+      console.log(localStorage.getItem("userInfo"));
+      console.log(seatData.id);
+    } else {
+      setUserSeat(null);
+      console.log(localStorage.getItem("userInfo"));
+      console.log(seatData.id);
+    }
+
+    // debug
+    const fetchCourseAndSeats = async () => {
+      const token = localStorage.getItem("token");
+
+      if (token) {
+        const decodedToken = jwtDecode(token);
+        const memberType = decodedToken.role;
+
+        setCurrentUser({
+          memberId: decodedToken.id,
+          memberType: memberType,
+          courseId: null,
+        });
+
+        if (memberType === "ROLE_STUDENT" || memberType === "ROLE_TEACHER") {
+          try {
+            let courseId = null;
+            if (memberType === "ROLE_STUDENT") {
+              courseId = await getCourseId();
+            }
+            if (memberType === "ROLE_TEACHER") {
+              courseId = await getTeacherByCourseId();
+            }
+            setSelectedCourseId(courseId);
+            fetchSeatsByCourse(courseId); // courseId로 좌석 정보 가져오기
+          } catch (error) {
+            console.error("Error fetching course ID:", error);
+          }
+        } else {
+          fetchStudentCourse();
+        }
+      }
+    };
+
+    fetchCourseAndSeats(); // 비동기 함수 호출
   }, []);
 
   const handleStudentSeatRegistration = async (seatId) => {
@@ -267,14 +327,16 @@ export default function StudentRoom() {
       if (response.status === 200) {
         console.log("좌석 등록 성공:", response.data);
 
+        // 좌석 상태 업데이트
+        setUserSeat(seatId);
+        const seatInfo = JSON.stringify({ id: seatId });
+        localStorage.setItem("seatInfo", seatInfo);
+
         // 좌석 등록 후 최신 좌석 정보를 다시 불러와서 로컬 상태와 동기화
         await fetchSeatsByCourse(selectedCourseId);
 
-        // 좌석 상태 업데이트
-        setUserSeat(seatId);
-        localStorage.setItem("userHasSeat", seatId);
-
-        handleCancelRegisterSeat();
+        // 모든 상태 업데이트가 완료된 후 다이얼로그 닫기
+        setRegisterDialogOpen(false);
       } else {
         console.error("좌석 등록 실패:", response.data);
       }
@@ -385,41 +447,40 @@ export default function StudentRoom() {
     }
   };
 
+  // useEffect(() => {
+
+  // }, []);
+
   useEffect(() => {
-    const fetchCourseAndSeats = async () => {
+    const handleUserOnlineStatus = async () => {
       const token = localStorage.getItem("token");
+      if (!token) return;
 
-      if (token) {
-        const decodedToken = jwtDecode(token);
-        const memberType = decodedToken.role;
-
-        setCurrentUser({
-          memberId: decodedToken.id,
-          memberType: memberType,
-          courseId: null,
-        });
-
-        if (memberType === "ROLE_STUDENT" || memberType === "ROLE_TEACHER") {
+      const decodedToken = jwtDecode(token);
+      if (decodedToken.role === "ROLE_STUDENT") {
+        const storedSeatId = JSON.parse(localStorage.getItem("seatInfo")).id;
+        console.log(storedSeatId);
+        if (storedSeatId) {
           try {
-            let courseId = null;
-            if (memberType === "ROLE_STUDENT") {
-              courseId = await getCourseId();
-            }
-            if (memberType === "ROLE_TEACHER") {
-              courseId = await getTeacherByCourseId();
-            }
-            setSelectedCourseId(courseId);
-            fetchSeatsByCourse(courseId); // courseId로 좌석 정보 가져오기
+            await updateStudentOnlineStatus(storedSeatId, true);
           } catch (error) {
-            console.error("Error fetching course ID:", error);
+            console.error("Failed to update online status:", error);
           }
-        } else {
-          fetchStudentCourse();
         }
       }
     };
 
-    fetchCourseAndSeats(); // 비동기 함수 호출
+    handleUserOnlineStatus();
+
+    // 페이지를 떠날 때 오프라인으로 상태 변경
+    return () => {
+      const storedSeatId = localStorage.getItem("seatInfo").id;
+      if (storedSeatId) {
+        updateStudentOnlineStatus(storedSeatId, false).catch((error) =>
+          console.error("Failed to update offline status:", error)
+        );
+      }
+    };
   }, []);
 
   const fetchCourses = useCallback(async () => {
@@ -450,6 +511,7 @@ export default function StudentRoom() {
       const sortedSeats = response.data.sort(
         (a, b) => a.seatNumber - b.seatNumber
       );
+      console.log(sortedSeats);
       setProfiles(sortedSeats);
     } catch (error) {
       console.error(
@@ -457,6 +519,13 @@ export default function StudentRoom() {
         error
       );
     }
+  };
+
+  const handleCourseChange = (event) => {
+    const courseId = event.target.value;
+    setSelectedCourseId(courseId);
+    fetchSeatsByCourse(courseId);
+    localStorage.setItem("selectedCourseId", courseId); // Save to localStorage
   };
 
   const checkIfSeatsRegistered = async () => {
@@ -517,25 +586,29 @@ export default function StudentRoom() {
       {currentUser && currentUser.memberType === "ROLE_ADMIN" && (
         <Box
           sx={{
-            width: "330px",
-            height: "4px",
-            marginBottom: "60px",
-            marginLeft: "63px",
+            position: "fixed", // 화면에 고정
+            top: 80, // 화면 위쪽에서 20px 내려오도록 설정
+            right: 20, // 화면 오른쪽에서 20px 떨어지도록 설정
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" }, // 작은 화면에서는 세로, 큰 화면에서는 가로 정렬
+            gap: 2, // 버튼 간 간격 설정
+            alignItems: "center",
+            padding: 2,
+            marginBottom: "-10px",
+            backgroundColor: "white",
+            borderRadius: 1,
+            boxShadow: 0, // 그림자 효과로 돋보이게
+            zIndex: 1000, // 다른 요소보다 위에 표시
           }}
         >
+          {/* 강의 선택 드롭다운 */}
           <TextField
-            sx={{
-              width: "330px",
-              height: "4px",
-            }}
+            sx={{ minWidth: "300px" }}
             select
             id="courseSelect"
             label="강의 선택"
             value={selectedCourseId}
-            onChange={(e) => {
-              setSelectedCourseId(e.target.value);
-              fetchSeatsByCourse(e.target.value);
-            }}
+            onChange={handleCourseChange} // handleCourseChange 함수로 대체
           >
             {courses.map((course) => (
               <MenuItem key={course.id} value={course.id}>
@@ -544,24 +617,23 @@ export default function StudentRoom() {
             ))}
           </TextField>
 
-          <Box>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => setOpenSeatDialog(true)}
-              sx={{ left: 1140 }}
-            >
-              좌석 등록
-            </Button>
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={() => setOpenDeleteDialog(true)}
-              sx={{ left: 1150 }}
-            >
-              좌석 삭제
-            </Button>
-          </Box>
+          {/* 좌석 등록 버튼 */}
+          <Button
+            variant="contained"
+            color=""
+            onClick={() => setOpenSeatDialog(true)}
+          >
+            좌석 등록
+          </Button>
+
+          {/* 좌석 삭제 버튼 */}
+          <Button
+            variant="contained"
+            color=""
+            onClick={() => setOpenDeleteDialog(true)}
+          >
+            좌석 삭제
+          </Button>
         </Box>
       )}
 
@@ -624,7 +696,11 @@ export default function StudentRoom() {
         </div>
       )}
 
-      <Dialog open={open} onClose={closeProfileModal}>
+      <Dialog
+        open={open}
+        onClose={closeProfileModal}
+        BackdropProps={{ style: { backgroundColor: "transparent" } }}
+      >
         <DialogContent>
           <Box
             sx={{
