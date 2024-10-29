@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import Stack from '@mui/joy/Stack';
 import Sheet from '@mui/joy/Sheet';
 import Typography from '@mui/joy/Typography';
@@ -9,8 +9,31 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import ChatListItem from './ChatListItem';
 import { toggleMessagesPane } from '../../utils/chat/utils';
+import socket from "../../utils/socket";
+import Modal from "@mui/material/Modal";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import {Button} from "@mui/material";
 
 export default function ChatsPane({ chats, setSelectedChat, selectedChatId }) {
+  const [open, setOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState('');
+  const [availableUsers, setAvailableUsers] = useState([]);
+  const userId = localStorage.getItem('userId');
+
+  const handleOpen = () => {
+    setOpen(true);
+    socket.emit('fetchAvailableUsers', { userId });
+  };
+
+  const handleClose = () => setOpen(false);
+
+  const handleCreateChat = () => {
+    if (!selectedUser) return;
+    socket.emit('createChat', { participants: [userId, selectedUser] });
+  };
+
+
   return (
       <Sheet
           sx={{
@@ -48,9 +71,10 @@ export default function ChatsPane({ chats, setSelectedChat, selectedChatId }) {
               color="neutral"
               size="sm"
               sx={{ display: { xs: 'none', sm: 'unset' } }}
-          >
+              onClick={handleOpen}>
             <EditNoteRoundedIcon />
           </IconButton>
+
           <IconButton
               variant="plain"
               aria-label="edit"
@@ -89,5 +113,6 @@ export default function ChatsPane({ chats, setSelectedChat, selectedChatId }) {
           ))}
         </List>
       </Sheet>
+
   );
 }
