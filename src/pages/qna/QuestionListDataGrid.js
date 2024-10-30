@@ -41,12 +41,12 @@ export default function QuestionBoard() {
   const [rows, setRows] = useState([]);
   const [openDrawer, setOpenDrawer] = useState(false);
   const [selectedRow, setSelectedRow] = useState(null);
+  const [isAnswerDeleteModalOpen, setIsAnswerDeleteModalOpen] = useState(false);
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isAnswerDeleteModalOpen, setIsAnswerDeleteModalOpen] = useState(false);
   const [selectedAnswerId, setSelectedAnswerId] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [content, setContent] = useState("");
@@ -58,12 +58,45 @@ export default function QuestionBoard() {
   const [courseId, setCourseId] = useState(null); // 강의 ID 상태 추가
   const [type, setType] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
 
   // 이벤트 핸들러
-  const handleRowClick = (params) => {
-    setSelectedRow(params.row);
-    setOpenDrawer(true);
+  const handleRowClick = async (params) => {
+    const clickedRow = params.row;
+
+    // 상세 정보가 없는 경우 서버에서 다시 조회
+    try {
+      // 여기에 실제 질문 상세 조회 API를 추가하면 더 좋습니다
+      // const questionDetail = await getQuestionDetail(clickedRow.id);
+
+      const processedRow = {
+        ...clickedRow,
+        studentId: clickedRow.studentId || clickedRow.memberId, // studentId가 없으면 memberId 사용
+      };
+
+      setSelectedRow(processedRow);
+      setOpenDrawer(true);
+
+      console.log("Processed clicked row:", processedRow);
+      console.log("Current user info:", userInfo?.member);
+    } catch (error) {
+      console.error("Error processing row click:", error);
+    }
   };
+
+  // useEffect 추가 - selectedRow 변경 시 권한 재확인
+  useEffect(() => {
+    if (selectedRow && userInfo?.member) {
+      console.log("=== 권한 체크 데이터 ===");
+      console.log("Selected Row:", selectedRow);
+      console.log("User Info:", userInfo.member);
+      console.log(
+        "Is Same User:",
+        selectedRow.studentId === userInfo.member.id
+      );
+      console.log("========================");
+    }
+  }, [selectedRow, userInfo]);
 
   const columns = [
     {
@@ -295,13 +328,23 @@ export default function QuestionBoard() {
     }
 
     try {
-      await saveQuestionApi({
+      const newQuestion = await saveQuestionApi({
         content,
         memberId: userInfo.member.id,
-        courseId, // 강의 ID 포함
+        courseId,
       });
+
+      // 새 질문 데이터에 필요한 정보 추가
+      const processedQuestion = {
+        ...newQuestion,
+        studentId: userInfo.member.id, // studentId 명시적 추가
+        memberId: userInfo.member.id, // memberId 명시적 추가
+      };
+
+      // 새 질문을 목록에 추가
+      setRows((prevRows) => [processedQuestion, ...prevRows]);
+
       showSnackbar("질문이 등록되었습니다.");
-      await fetchQuestions();
       setIsModalOpen(false);
       resetForm();
     } catch (error) {
@@ -310,18 +353,18 @@ export default function QuestionBoard() {
   };
 
   const handleQuestionUpdate = async () => {
-    if (!canEditQuestion(selectedRow)) {
-      showSnackbar("수정 권한이 없습니다.", "error");
+    if (!content.trim()) {
+      showSnackbar("질문 내용을 입력하세요.", "warning");
       return;
     }
+
     try {
       const updatedQuestion = await updateQuestionApi({
         id: selectedRow.id,
-        content: content || selectedRow.content,
+        content: content, // 현재 수정된 content 사용
       });
-      showSnackbar("질문이 수정되었습니다.");
 
-      // 질문 목록을 업데이트하여 화면에 즉시 반영
+      // 성공 시 상태 업데이트
       setRows((prevRows) =>
         prevRows.map((row) =>
           row.id === updatedQuestion.id
@@ -330,18 +373,33 @@ export default function QuestionBoard() {
         )
       );
 
+      setSelectedRow((prev) => ({
+        ...prev,
+        content: updatedQuestion.content,
+      }));
+
+      showSnackbar("질문이 수정되었습니다.");
       setIsEditing(false);
-      resetForm();
+      setContent(""); // content 초기화
     } catch (error) {
+      console.error("질문 수정 실패:", error);
       showSnackbar("질문 수정에 실패했습니다.", "error");
     }
   };
 
   const handleQuestionDelete = async () => {
-    // selectedIds에 있는 모든 질문에 대해 권한 체크
     const hasPermission = selectedIds.every((id) => {
       const question = rows.find((row) => row.id === id);
       if (!question) return false;
+
+      console.log("=== 삭제 권한 체크 상세 정보 ===");
+      console.log("Question:", question);
+      console.log("User type:", type);
+      console.log("User ID:", userInfo?.member?.id);
+      console.log("Question studentId:", question.studentId);
+      console.log("Is same user:", question.studentId === userInfo?.member?.id);
+      console.log("===================");
+
       return (
         type === "ROLE_ADMIN" ||
         type === "ROLE_TEACHER" ||
@@ -361,6 +419,7 @@ export default function QuestionBoard() {
       setIsDeleteModalOpen(false);
       setOpenDrawer(false);
     } catch (error) {
+      console.error("질문 삭제 실패:", error);
       showSnackbar("질문 삭제에 실패했습니다.", "error");
     }
   };
@@ -406,13 +465,32 @@ export default function QuestionBoard() {
 
     try {
       const response = await saveAnswerApi({
-        teacherId: userInfo.member.id, // userInfo.member.id를 교사 ID로 사용
-        questionId: selectedRow.id, // 선택한 질문의 ID
-        content: newAnswer, // 답변 내용
+        teacherId: userInfo.member.id,
+        questionId: selectedRow.id,
+        content: newAnswer,
       });
       console.log("서버 응답:", response);
+
+      // 답변 목록 업데이트
+      const updatedAnswers = await getAnswersByQuestionIdApi(selectedRow.id);
+      setAnswers(updatedAnswers);
+
+      // 질문의 해결 여부도 업데이트
+      if (selectedRow) {
+        setSelectedRow((prev) => ({
+          ...prev,
+          solved: true,
+        }));
+
+        // DataGrid의 행도 업데이트
+        setRows((prevRows) =>
+          prevRows.map((row) =>
+            row.id === selectedRow.id ? { ...row, solved: true } : row
+          )
+        );
+      }
+
       showSnackbar("답변이 등록되었습니다.");
-      await fetchAnswers(selectedRow.id); // 답변 목록 갱신
       setNewAnswer("");
     } catch (error) {
       showSnackbar("답변 등록에 실패했습니다.", "error");
@@ -456,37 +534,79 @@ export default function QuestionBoard() {
     const memberType = userInfo?.member?.memberType;
     const userId = userInfo?.member?.id;
 
+    console.log("Checking delete permission:");
+    console.log("User type:", memberType);
+    console.log("User ID:", userId);
+    console.log("Answer:", answer);
+
     // 관리자는 모든 답변 삭제 가능
     if (memberType === "ROLE_ADMIN") {
       return true;
     }
+
     // 강사는 자신의 답변만 삭제 가능
-    return memberType === "ROLE_TEACHER" && answer.teacherId === userId;
+    if (memberType === "ROLE_TEACHER" && answer.teacherId === userId) {
+      return true;
+    }
+
+    return false;
   };
 
   // handleAnswerDelete 함수 내 권한 체크 코드 수정
   const handleAnswerDelete = async (answerId) => {
-    const answer = answers.find((a) => a.id === answerId);
-
-    if (!answer || !canDeleteAnswer(answer)) {
-      showSnackbar("삭제 권한이 없습니다.", "error");
-      return;
-    }
-
     try {
+      console.log("Attempting to delete answer with ID:", answerId);
+      const answer = answers.find((a) => a.id === answerId);
+
+      if (!answer) {
+        console.error("No answer found with ID:", answerId);
+        showSnackbar("답변을 찾을 수 없습니다.", "error");
+        return;
+      }
+
+      // 권한 체크
+      const hasPermission = canDeleteAnswer(answer);
+      console.log("Delete permission check:", {
+        hasPermission,
+        memberType: userInfo?.member?.memberType,
+        userId: userInfo?.member?.id,
+        teacherId: answer.teacherId,
+      });
+
+      if (!hasPermission) {
+        showSnackbar("삭제 권한이 없습니다.", "error");
+        return;
+      }
+
+      // 답변 삭제 실행
       await deleteAnswerApi(answerId);
+
+      // UI 업데이트: 답변 목록 가져오기
+      const updatedAnswers = await getAnswersByQuestionIdApi(selectedRow.id);
+      setAnswers(updatedAnswers); // 답변 목록 상태 업데이트
+
+      // 답변이 없으면 solved 상태를 false로 업데이트
+      if (!updatedAnswers || updatedAnswers.length === 0) {
+        setSelectedRow((prev) => ({
+          ...prev,
+          solved: false,
+        }));
+
+        // DataGrid rows 업데이트
+        setRows((prevRows) =>
+          prevRows.map((row) =>
+            row.id === selectedRow.id ? { ...row, solved: false } : row
+          )
+        );
+      }
+
+      setSelectedAnswerId(null);
+      handleMenuClose();
       showSnackbar("답변이 삭제되었습니다.");
-      await fetchAnswers(selectedRow.id);
-      setIsAnswerDeleteModalOpen(false); // 모달 닫기
     } catch (error) {
+      console.error("Error deleting answer:", error);
       showSnackbar("답변 삭제에 실패했습니다.", "error");
     }
-  };
-
-  // 답변 삭제 버튼 클릭 핸들러 추가
-  const handleAnswerDeleteClick = (answerId) => {
-    setSelectedAnswerId(answerId);
-    setIsAnswerDeleteModalOpen(true);
   };
 
   // 답변 수정 시작 핸들러 (수정 모드 활성화)
@@ -501,18 +621,29 @@ export default function QuestionBoard() {
     setEditedAnswerContent("");
   };
 
+  const handleStartEdit = (questionContent) => {
+    setIsEditing(true);
+    setContent(questionContent);
+  };
+
   // 권한 체크 유틸리티 함수들
   const canEditQuestion = (question) => {
-    const memberType = userInfo?.member?.memberType;
-    const userId = userInfo?.member?.id;
+    if (!question || !userInfo?.member) return false;
 
-    console.log("Current user:", userId);
-    console.log("Question student:", question.studentId);
-    console.log("User type:", memberType);
+    const memberType = userInfo.member.memberType;
+    const userId = userInfo.member.id;
+    const questionUserId = question.studentId || question.memberId;
+
+    console.log("=== 권한 체크 상세 정보 ===");
+    console.log("Question userId:", questionUserId);
+    console.log("Current userId:", userId);
+    console.log("Member type:", memberType);
+    console.log("Is same user:", questionUserId === userId);
+    console.log("===================");
 
     return (
-      memberType === "ROLE_ADMIN" || // 관리자는 모든 질문 수정 가능
-      (memberType === "ROLE_STUDENT" && question.studentId === userId) // 학생은 자신의 질문만 수정 가능
+      memberType === "ROLE_ADMIN" ||
+      (memberType === "ROLE_STUDENT" && questionUserId === userId)
     );
   };
 
@@ -526,9 +657,9 @@ export default function QuestionBoard() {
     const userId = userInfo?.member?.id;
 
     return (
-      memberType === "ROLE_ADMIN" || // 관리자는 모든 질문 삭제 가능
-      memberType === "ROLE_TEACHER" || // 강사는 모든 질문 삭제 가능
-      (memberType === "ROLE_STUDENT" && question.studentId === userId) // 학생은 자신의 질문만 삭제 가능
+      memberType === "ROLE_ADMIN" ||
+      memberType === "ROLE_TEACHER" ||
+      (memberType === "ROLE_STUDENT" && question.memberId === userId) // studentId 대신 memberId로 비교
     );
   };
 
@@ -594,6 +725,37 @@ export default function QuestionBoard() {
     }
   };
 
+  const canShowMenu = (answer) => {
+    const memberType = userInfo?.member?.memberType;
+    const userId = userInfo?.member?.id;
+
+    // 강사는 자신의 답변에만 메뉴 표시
+    if (memberType === "ROLE_TEACHER") {
+      return answer.teacherId === userId;
+    }
+
+    // 관리자는 모든 답변에 메뉴 표시
+    return memberType === "ROLE_ADMIN";
+  };
+
+  // 메뉴 아이템 표시 여부 결정하는 함수 추가
+  const getMenuItems = (answer) => {
+    const memberType = userInfo?.member?.memberType;
+    const userId = userInfo?.member?.id;
+
+    // 강사는 자신의 답변에 모든 메뉴 표시
+    if (memberType === "ROLE_TEACHER" && answer.teacherId === userId) {
+      return ["edit", "delete"];
+    }
+
+    // 관리자는 본인 답변이면 모든 메뉴, 아니면 삭제만
+    if (memberType === "ROLE_ADMIN") {
+      return answer.teacherId === userId ? ["edit", "delete"] : ["delete"];
+    }
+
+    return [];
+  };
+
   const handleMenuOpen = (event, answerId) => {
     setAnchorEl(event.currentTarget);
     setSelectedAnswerId(answerId);
@@ -610,8 +772,64 @@ export default function QuestionBoard() {
     handleMenuClose();
   };
 
-  const handleMenuDelete = () => {
-    handleAnswerDeleteClick(selectedAnswerId);
+  const handleCloseDeleteModal = () => {
+    setIsAnswerDeleteModalOpen(false);
+    setDeleteTargetId(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      console.log("Confirming delete for answerId:", deleteTargetId);
+      const answer = answers.find((a) => a.id === deleteTargetId);
+
+      if (!answer) {
+        console.error("No answer found with ID:", deleteTargetId);
+        showSnackbar("답변을 찾을 수 없습니다.", "error");
+        return;
+      }
+
+      // 권한 체크
+      const hasPermission = canDeleteAnswer(answer);
+      if (!hasPermission) {
+        showSnackbar("삭제 권한이 없습니다.", "error");
+        return;
+      }
+
+      // 답변 삭제 실행
+      await deleteAnswerApi(deleteTargetId);
+
+      // 새로운 답변 목록 가져오기
+      const updatedAnswers = await getAnswersByQuestionIdApi(selectedRow.id);
+      setAnswers(updatedAnswers);
+
+      // 답변이 없으면 solved 상태를 false로 업데이트
+      if (!updatedAnswers || updatedAnswers.length === 0) {
+        // selectedRow 업데이트
+        setSelectedRow((prev) => ({
+          ...prev,
+          solved: false,
+        }));
+
+        // DataGrid의 행도 업데이트
+        setRows((prevRows) =>
+          prevRows.map((row) =>
+            row.id === selectedRow.id ? { ...row, solved: false } : row
+          )
+        );
+      }
+
+      showSnackbar("답변이 삭제되었습니다.");
+    } catch (error) {
+      console.error("Error deleting answer:", error);
+      showSnackbar("답변 삭제에 실패했습니다.", "error");
+    } finally {
+      handleCloseDeleteModal();
+    }
+  };
+
+  const handleMenuDelete = (answerId) => {
+    setDeleteTargetId(answerId);
+    setIsAnswerDeleteModalOpen(true);
     handleMenuClose();
   };
 
@@ -757,7 +975,7 @@ export default function QuestionBoard() {
       {/* 답변 삭제 모달 */}
       <CustomModal
         isOpen={isAnswerDeleteModalOpen}
-        closeModal={() => setIsAnswerDeleteModalOpen(false)}
+        closeModal={handleCloseDeleteModal}
       >
         <Box
           sx={{
@@ -771,7 +989,7 @@ export default function QuestionBoard() {
           }}
         >
           <h3>답변 삭제하기</h3>
-          <p>해당 답변을 삭제하시겠습니까?</p>
+          <p>답변을 삭제하시겠습니까?</p>
           <Box
             sx={{
               display: "flex",
@@ -781,14 +999,14 @@ export default function QuestionBoard() {
           >
             <Button
               variant="outlined"
-              onClick={() => setIsAnswerDeleteModalOpen(false)}
+              onClick={handleCloseDeleteModal}
               sx={{ width: "120px", height: "40px" }}
             >
               취소
             </Button>
             <Button
               variant="contained"
-              onClick={() => handleAnswerDelete(selectedAnswerId)}
+              onClick={handleConfirmDelete}
               sx={{
                 width: "120px",
                 height: "40px",
@@ -955,7 +1173,7 @@ export default function QuestionBoard() {
                   sx={{
                     position: "absolute",
                     right: 0,
-                    bottom: 0,
+                    top: 0,
                     cursor: canManageRecommendation() ? "pointer" : "default", // 권한에 따라 커서 스타일 변경
                   }}
                   onClick={() => {
@@ -996,7 +1214,7 @@ export default function QuestionBoard() {
                   borderBottom: "1px solid #d4d4d4",
                   borderBottomWidth: "0.1px",
                   marginTop: "4px",
-                  marginBottom: "30px",
+                  marginBottom: "60px",
                 }}
               />
 
@@ -1004,63 +1222,85 @@ export default function QuestionBoard() {
                 {isEditing ? (
                   <TextField
                     fullWidth
-                    value={content || selectedRow.content}
+                    value={content} // selectedRow.content 대신 content만 사용
                     onChange={(e) => setContent(e.target.value)}
                     multiline
                     sx={{ fontSize: "13px" }}
                   />
                 ) : (
-                  <Typography sx={{ fontSize: "15px", whiteSpace: "pre-wrap" }}>
+                  <Typography
+                    sx={{
+                      fontSize: "15px",
+                      whiteSpace: "pre-wrap",
+                      marginBottom: "45px",
+                    }}
+                  >
                     {selectedRow.content}
                   </Typography>
                 )}
-              </Box>
 
-              {/* 질문 수정/삭제 버튼 */}
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: "12px",
-                  marginBottom: "20px",
-                }}
-              >
-                {isEditing ? (
-                  <>
-                    <Button variant="outlined" onClick={handleQuestionUpdate}>
-                      저장
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      onClick={() => setIsEditing(false)}
-                    >
-                      취소
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    {canEditQuestion(selectedRow) && (
-                      <Button
-                        variant="outlined"
-                        onClick={() => setIsEditing(true)}
-                      >
-                        수정
+                {/* 수정/삭제 버튼 부분 */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: "12px",
+                    marginBottom: "20px",
+                  }}
+                >
+                  {isEditing ? (
+                    <>
+                      <Button variant="outlined" onClick={handleQuestionUpdate}>
+                        저장
                       </Button>
-                    )}
-                    {canDeleteQuestion(selectedRow) && (
                       <Button
                         variant="outlined"
                         onClick={() => {
-                          setSelectedIds([selectedRow.id]);
-                          setIsDeleteModalOpen(true);
+                          setIsEditing(false);
+                          setContent(""); // 수정 취소 시 content 초기화
                         }}
                       >
-                        삭제
+                        취소
                       </Button>
-                    )}
-                    <Typography sx={{ borderBottom: "1px solid" }}></Typography>
-                  </>
-                )}
+                    </>
+                  ) : (
+                    <>
+                      {/* 수정 버튼 - 관리자이거나 본인 글인 경우 */}
+                      {(type === "ROLE_ADMIN" ||
+                        (type === "ROLE_STUDENT" &&
+                          selectedRow?.studentId === userInfo?.member?.id)) && (
+                        <Button
+                          variant="outlined"
+                          onClick={() => handleStartEdit(selectedRow.content)} // 수정된 부분
+                        >
+                          수정
+                        </Button>
+                      )}
+                      {/* 삭제 버튼 */}
+                      {(type === "ROLE_ADMIN" ||
+                        type === "ROLE_TEACHER" ||
+                        (type === "ROLE_STUDENT" &&
+                          selectedRow?.studentId === userInfo?.member?.id)) && (
+                        <Button
+                          variant="outlined"
+                          onClick={() => {
+                            setSelectedIds([selectedRow.id]);
+                            setIsDeleteModalOpen(true);
+                          }}
+                        >
+                          삭제
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </Box>
+                {/* 구분선 - 항상 같은 위치에 표시 */}
+                <Box
+                  sx={{
+                    borderBottom: "1px solid #d4d4d4",
+                    width: "100%",
+                  }}
+                />
               </Box>
 
               {/* 답변 작성 */}
@@ -1177,7 +1417,9 @@ export default function QuestionBoard() {
                               sx={{
                                 fontSize: "12px",
                                 color: "gray",
-                                transform: "translateX(-255px)",
+                                transform: canShowMenu(answer)
+                                  ? "translateX(-255px)"
+                                  : "translateX(-584px)", // 더보기 메뉴 유무에 따라 위치 조정
                                 minWidth: "80px", // 상대 시간에 최소 너비를 지정
                                 textAlign: "left", // 오른쪽 정렬
                               }}
@@ -1188,31 +1430,29 @@ export default function QuestionBoard() {
                               })}
                             </Typography>
 
-                            {canManageAnswers() && (
-                              <>
-                                <Box>
-                                  <Button
-                                    size="small"
-                                    onClick={(e) =>
-                                      handleMenuOpen(e, answer.id)
-                                    }
-                                  >
-                                    <MoreVertIcon
-                                      fontSize="medium"
-                                      sx={{
-                                        color: "gray",
-                                        bottom: "14px",
-                                      }}
-                                    />
-                                  </Button>
-                                  <Menu
-                                    anchorEl={anchorEl}
-                                    open={
-                                      Boolean(anchorEl) &&
-                                      selectedAnswerId === answer.id
-                                    }
-                                    onClose={handleMenuClose}
-                                  >
+                            {canShowMenu(answer) && (
+                              <Box>
+                                <Button
+                                  size="small"
+                                  onClick={(e) => handleMenuOpen(e, answer.id)}
+                                >
+                                  <MoreVertIcon
+                                    fontSize="medium"
+                                    sx={{
+                                      color: "gray",
+                                      bottom: "14px",
+                                    }}
+                                  />
+                                </Button>
+                                <Menu
+                                  anchorEl={anchorEl}
+                                  open={
+                                    Boolean(anchorEl) &&
+                                    selectedAnswerId === answer.id
+                                  }
+                                  onClose={handleMenuClose}
+                                >
+                                  {getMenuItems(answer).includes("edit") && (
                                     <MenuItem onClick={handleMenuEdit}>
                                       <EditIcon
                                         fontSize="small"
@@ -1220,16 +1460,26 @@ export default function QuestionBoard() {
                                       />
                                       수정
                                     </MenuItem>
-                                    <MenuItem onClick={handleMenuDelete}>
+                                  )}
+                                  {getMenuItems(answer).includes("delete") && (
+                                    <MenuItem
+                                      onClick={() => {
+                                        console.log(
+                                          "Delete MenuItem clicked - answerId:",
+                                          answer.id
+                                        );
+                                        handleMenuDelete(answer.id);
+                                      }}
+                                    >
                                       <DeleteIcon
                                         fontSize="small"
                                         sx={{ mr: 1 }}
                                       />
                                       삭제
                                     </MenuItem>
-                                  </Menu>
-                                </Box>
-                              </>
+                                  )}
+                                </Menu>
+                              </Box>
                             )}
                           </Box>
 
@@ -1238,7 +1488,7 @@ export default function QuestionBoard() {
                               fontSize: "14px",
                               whiteSpace: "pre-wrap",
                               position: "relative",
-                              bottom: "12px",
+                              bottom: "10px",
                             }}
                           >
                             {answer.content}
