@@ -35,7 +35,8 @@ function LoginForm({ onLoginSuccess }) {
     setLoading(true);
 
     try {
-      console.log("1111=============>");
+      console.log("1111=============>test");
+      console.log(memberId, password);
       const response = await axios.post("http://localhost:8080/api/login", {
         memberId,
         password,
@@ -48,6 +49,7 @@ function LoginForm({ onLoginSuccess }) {
         const { authResponseDTO: member } = response.data;
 
         setUserInfo({ member });
+        console.log(member);
         localStorage.setItem("userInfo", JSON.stringify({ member })); // 로컬 스토리지에 저장
         localStorage.setItem("userId", member.id); // 로컬 스토리지에 저장
         localStorage.setItem("membertype", member.memberType); // 로컬 스토리지에 저장
@@ -57,7 +59,7 @@ function LoginForm({ onLoginSuccess }) {
         );
         document.cookie = `refreshToken=${response.data.refreshTokenCookie.value}; path=/;`;
 
-        await fetchSeatInfo(memberId); // 로그인 성공 후 좌석 정보를 가져오는 로직 추가
+        await fetchSeatInfo(member.id); // 로그인 성공 후 좌석 정보를 가져오는 로직 추가
 
         onLoginSuccess(memberId);
         setError("");
@@ -76,6 +78,8 @@ function LoginForm({ onLoginSuccess }) {
   const fetchSeatInfo = async (memberId) => {
     try {
       const seatResponse = await apiClient.get(`/seat/status/${memberId}`);
+
+      console.log(seatResponse);
 
       if (seatResponse.data) {
         const seatInfo = seatResponse.data;
