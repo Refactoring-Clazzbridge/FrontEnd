@@ -22,11 +22,23 @@ import { savePost } from "../../services/apis/post/post";
 import { deletePost as deletePostApi } from "../../services/apis/post/delete";
 import { updatePost } from "../../services/apis/post/put";
 import { getBoardType } from "../../services/apis/boardType/get";
+import { getCourseAllPosts } from "../../services/apis/post/get";
 import { getAllCourse } from "../../services/apis/course/get";
+import { getCourseIdForUser } from "../../services/apis/course/get";
 import PostComment from "../comment/PostComment";
 
-const columns = [
+const columns = (isAdmin) => [
   { field: "id", headerName: "No", flex: 0.5, resizable: false },
+  ...(isAdmin
+    ? [
+        {
+          field: "courseTitle",
+          headerName: "강의명",
+          flex: 1,
+          resizable: false,
+        },
+      ]
+    : []),
   {
     field: "boardType",
     flex: 1,
@@ -73,6 +85,7 @@ const columns = [
 
 export default function FreeBoardData() {
   const [currentUser, setCurrentUser] = useState(null);
+  const [userCourseId, setUserCourseId] = useState(null);
   const [rows, setRows] = useState([]); // 상태 추가
   const [openDrawer, setOpenDrawer] = useState(false); // Drawer 열기 상태
   const [selectedRow, setSelectedRow] = useState(null); // 선택된 행 데이터
@@ -88,9 +101,27 @@ export default function FreeBoardData() {
   const [boardId, setBoardId] = useState(""); // 선택된 카테고리 ID 상태
 
   const fetchData = useCallback(async () => {
-    const data = await getAllPosts(); // API 호출
-    setRows(data); // 상태 업데이트
-  }, []);
+    if (
+      currentUser &&
+      currentUser.member &&
+      currentUser.member.memberType === "ROLE_ADMIN"
+    ) {
+      const data = await getAllPosts();
+      const updatedData = data.map((post) => ({
+        ...post,
+        courseTitle: post.courseTitle || "전체",
+      }));
+      setRows(updatedData);
+    } else {
+      const userCourseId = await getCourseIdForUser();
+      setUserCourseId(userCourseId);
+      const data = await getCourseAllPosts(userCourseId); // courseId에 따라 게시물 가져오기
+      const updatedData = data.map((post) => ({
+        ...post,
+      }));
+      setRows(updatedData);
+    }
+  }, [currentUser, courseId]);
 
   const fetchBoardTypes = useCallback(async () => {
     try {
@@ -278,6 +309,11 @@ export default function FreeBoardData() {
       handleCloseDrawer(); // Drawer 닫기 함수 호출
     }
   };
+
+  const isAdmin =
+    currentUser &&
+    currentUser.member &&
+    currentUser.member.memberType === "ROLE_ADMIN";
 
   return (
     <>
@@ -652,7 +688,7 @@ export default function FreeBoardData() {
             pageSizeOptions: ["5", "10", "20"],
           }}
           onRowSelectionModelChange={handleSelectionChange}
-          columns={columns}
+          columns={columns(isAdmin)}
           initialState={{
             pagination: {
               paginationModel: {
