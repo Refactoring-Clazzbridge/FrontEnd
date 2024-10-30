@@ -20,3 +20,13 @@ export const getStudentsByCourseId = async (assignmentId) => {
     throw error;
   }
 };
+
+export const getCourseIdForUser = async () => {
+  try {
+    const response = await axios.get(`course/userCourseId`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching course:", error);
+    throw error;
+  }
+};
