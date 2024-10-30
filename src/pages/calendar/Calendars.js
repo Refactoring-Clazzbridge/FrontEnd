@@ -38,30 +38,7 @@ const messages = {
 
 const localizer = momentLocalizer(moment);
 
-const CustomEvent = ({ event }) => (
-  <div style={{ backgroundColor: "transparent", padding: "5px" }}>
-    {" "}
-    {/* 배경색을 투명하게 설정 */}
-    <strong>{event.eventTitle}</strong>
-    <div style={{ fontSize: "10px" }}>{event.courseTitle}</div>{" "}
-    {/* 강의명 표시 */}
-  </div>
-);
-
-const colors = [
-  "#FFB3BA", // Light Red
-  "#FFDFBA", // Light Orange
-  "#FFFFBA", // Light Yellow
-  "#BAFFB3", // Light Green
-  "#BAE1FF", // Light Blue
-  "#FFBAE1", // Light Pink
-  "#FFABAB", // Light Coral
-  "#FFC3A0", // Light Salmon
-  "#D5AAFF", // Light Purple
-  "#FF677D", // Light Rose
-];
-
-const Calendars = () => {
+const Calendars = ({ readOnly }) => {
   // 모달 상태 관리
   const [open, setOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -126,13 +103,12 @@ const Calendars = () => {
     apiClient
       .get("schedule")
       .then((response) => {
-        const fetchedEvents = response.data.map((event, index) => ({
+        const fetchedEvents = response.data.map((event) => ({
           ...event,
           start: moment(event.startDate, "YYYY-MM-DD HH:mm").toDate(),
           end: moment(event.endDate, "YYYY-MM-DD HH:mm").toDate(),
-          backgroundColor: colors[index % colors.length], // 색상 배열에서 색상 선택
         }));
-        setEvents(fetchedEvents); // 상태 업데이트
+        setEvents(fetchedEvents); // 3. 상태 업데이트
       })
       .catch((error) => {
         console.error("이벤트 데이터를 불러오지 못했습니다.", error);
@@ -280,7 +256,7 @@ const Calendars = () => {
   return (
     <LocalizationProvider dateAdapter={AdapterMoment}>
       <div style={{ height: "80vh" }}>
-        {role === "ROLE_ADMIN" ? (
+        {!readOnly && role === "ROLE_ADMIN" ? (
           <Button
             variant="outlined"
             color="secondary"
@@ -297,6 +273,8 @@ const Calendars = () => {
           events={events
             .filter((event) => {
               // 권한에 맞는 일정을 필터링
+              // 예: 사용자 권한이 'admin'인 경우 모든 이벤트를 보여주고,
+              // 권한이 'user'인 경우 특정 조건을 만족하는 이벤트만 보여주기
               if (role === "ROLE_ADMIN") {
                 return true; // 'admin' 권한은 모든 일정 보여줌
               } else if (role === "ROLE_STUDENT" || role === "ROLE_TEACHER") {
@@ -305,20 +283,17 @@ const Calendars = () => {
                   event.courseTitle === "전체 일정"
                 );
               }
-              return false; // 기본적으로 권한이 으면 이벤트를 안 보여줌
+              return false; // 기본적으로 권한이 없으면 이벤트를 안 보여줌
             })
             .map((event) => ({
               ...event,
-              title: event.eventTitle, // 제목은 그대로 유지
+              title: event.eventTitle,
             }))}
           startAccessor="start"
           endAccessor="end"
           style={{ height: "100%" }}
           onSelectEvent={handleSelectEvent}
           messages={messages} // 여기에 메시지 객체를 추가
-          components={{
-            event: CustomEvent, // 커스텀 이벤트 컴포넌트 사용
-          }}
         />
 
         <Modal
@@ -335,7 +310,7 @@ const Calendars = () => {
               borderRadius: "8px",
               maxWidth: "400px",
               margin: "auto",
-              top: "30%",
+              top: "15%",
               position: "relative",
             }}
           >
@@ -355,7 +330,7 @@ const Calendars = () => {
                   style={{ marginBottom: "20px" }}
                   variant="outlined"
                 >
-                  <InputLabel>강의</InputLabel>
+                  <InputLabel>강의 </InputLabel>
                   <Select
                     label="강의"
                     value={newEventcourseTitle}
@@ -462,7 +437,7 @@ const Calendars = () => {
                     : ""}
                 </Typography>
 
-                {role === "ROLE_ADMIN" ? (
+                {!readOnly && role === "ROLE_ADMIN" ? (
                   <div style={{ marginTop: "20px" }}>
                     <Button
                       variant="outlined"
