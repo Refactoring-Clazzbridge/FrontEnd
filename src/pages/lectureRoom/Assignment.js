@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import AssignmentItem from "../../components/assignment/AssignmentItem";
 import { getStudentCourseId } from "../../services/apis/studentCourse/get";
 import { Button, Tooltip, Box, TextField } from "@mui/material";
 import CustomModal from "../../components/common/CustomModal";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { getAssignmentsByCourseId } from "../../services/apis/assignment/get";
+import { getAllAssignments } from "../../services/apis/assignment/get"; // getAllSubmissions API import
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { createAssignment } from "../../services/apis/assignment/post";
@@ -47,7 +48,7 @@ export default function AssignmentAccordion() {
     },
   };
 
-  const fetchStudentCourseId = async () => {
+  const fetchStudentCourseId = useCallback(async () => {
     if (currentUser) {
       try {
         const result = await getStudentCourseId();
@@ -58,7 +59,7 @@ export default function AssignmentAccordion() {
         console.error("Failed to fetch student course ID:", error);
       }
     }
-  };
+  }, [currentUser]);
 
   useEffect(() => {
     const userInfoString = localStorage.getItem("userInfo");
@@ -70,7 +71,7 @@ export default function AssignmentAccordion() {
 
   useEffect(() => {
     fetchStudentCourseId();
-  }, [currentUser]);
+  }, [fetchStudentCourseId]);
 
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => {
@@ -143,36 +144,48 @@ export default function AssignmentAccordion() {
     }
   };
 
-  const fetchAssignments = async () => {
+  const fetchAssignments = useCallback(async () => {
     try {
-      console.log(courseId, "courseId");
-      const fetchedAssignments = await getAssignmentsByCourseId(courseId);
+      let fetchedAssignments;
+      if (
+        currentUser &&
+        currentUser.member &&
+        currentUser.member.memberType === "ROLE_ADMIN"
+      ) {
+        fetchedAssignments = await getAllAssignments();
+      } else {
+        fetchedAssignments = await getAssignmentsByCourseId(courseId);
+      }
       setAssignments(fetchedAssignments);
     } catch (error) {
       console.error("과제 목록을 가져오는 데 오류가 발생했습니다.", error);
-      showSnackbar("과제 목록을 가져오는 데 오류가 발생했습니다.", "error");
     }
-  };
+  }, [courseId, currentUser]);
 
   useEffect(() => {
-    if (courseId) {
+    if (currentUser || courseId) {
       fetchAssignments(); // 과제 가져오기 호출
     }
-  }, [courseId]);
+  }, [currentUser, courseId, fetchAssignments]);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
-      <Box sx={{ marginBottom: "16px" }}>
-        <Tooltip title="과제 작성">
-          <Button
-            variant="outlined"
-            sx={{ height: "38px" }}
-            onClick={openModal}
-          >
-            과제 등록
-          </Button>
-        </Tooltip>
-      </Box>
+      {/* 과제 등록 버튼 */}
+      {currentUser &&
+        currentUser.member &&
+        currentUser.member.memberType === "ROLE_TEACHER" && (
+          <Box sx={{ marginBottom: "16px" }}>
+            <Tooltip title="과제 작성">
+              <Button
+                variant="outlined"
+                sx={{ height: "38px" }}
+                onClick={openModal}
+              >
+                과제 등록
+              </Button>
+            </Tooltip>
+          </Box>
+        )}
 
       <AssignmentItem
         currentUser={currentUser}
