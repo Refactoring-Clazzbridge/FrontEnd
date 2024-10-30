@@ -9,3 +9,14 @@ export const getAllCourse = async () => {
     throw error;
   }
 };
+
+export const getStudentsByCourseId = async (assignmentId) => {
+  try {
+    console.log(assignmentId, "assignmentId");
+    const response = await axios.get(`course/students/${assignmentId}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching course:", error);
+    throw error;
+  }
+};
