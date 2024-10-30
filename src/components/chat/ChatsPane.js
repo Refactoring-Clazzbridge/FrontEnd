@@ -11,57 +11,29 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import ChatListItem from './ChatListItem';
 import { toggleMessagesPane } from '../../utils/chat/utils';
-import { TextField } from '@mui/material';
+import socket from '../../utils/socket';
 
 const ChatsPane = ({ chats, setSelectedChat, selectedChatId }) => {
+  const [users, setUsers] = useState([]);
 
-  const users = [
-    {
-      name: 'Steve E.',
-      username: '@steveEberger',
-      avatar: '/static/images/avatar/2.jpg',
-      online: true,
-    },
-    {
-      name: 'Katherine Moss',
-      username: '@kathy',
-      avatar: '/static/images/avatar/3.jpg',
-      online: false,
-    },
-    {
-      name: 'Phoenix Baker',
-      username: '@phoenix',
-      avatar: '/static/images/avatar/1.jpg',
-      online: true,
-    },
-    {
-      name: 'Eleanor Pena',
-      username: '@eleanor',
-      avatar: '/static/images/avatar/4.jpg',
-      online: false,
-    },
-    {
-      name: 'Kenny Peterson',
-      username: '@kenny',
-      avatar: '/static/images/avatar/5.jpg',
-      online: true,
-    },
-    {
-      name: 'Al Sanders',
-      username: '@al',
-      avatar: '/static/images/avatar/6.jpg',
-      online: true,
-    },
-    {
-      name: 'Melissa Van Der Berg',
-      username: '@melissa',
-      avatar: '/static/images/avatar/7.jpg',
-      online: false,
-    },
-  ];
+  useEffect(() => {
+    // 서버에 courseId로 사용자 데이터 요청
+    socket.emit('fetchChatUserData');
+
+    // 서버에서 사용자 데이터 응답 받기
+    socket.on('fetchedChatUserData', (studentData) => {
+      setUsers(studentData);
+    });
+
+    // 클린업: 이벤트 리스너 제거
+    return () => {
+      socket.off('fetchedChatUserData');
+    };
+  }, []);
 
   const [open, setOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState('');
+  const [text, setText] = useState('');
 
   const modalOpen = () => {
     console.log("모달 열기 함수 호출됨");
@@ -81,9 +53,18 @@ const ChatsPane = ({ chats, setSelectedChat, selectedChatId }) => {
     }
   };
 
+  const handleTextChange = (event) => {
+      setText(event.target.value);
+  }
+
 
   const handleSaveEvent = () => {
     console.log(`Selected user: ${selectedUser}`);
+    console.log(`Text: ${text}`);
+
+    socket.emit('createChat', { username: [selectedUser, localStorage.getItem("userId")], text: text }, (response) => {
+      console.log(response);
+    });
 
     modalClose();
   };
@@ -221,7 +202,7 @@ const ChatsPane = ({ chats, setSelectedChat, selectedChatId }) => {
                     onChange={handleUserChange}
                 >
                   {users.map((user) => (
-                      <Option key={user.username} value={user.username}>
+                      <Option key={user.username} value={user.id}>
                         {user.name}
                       </Option>
                   ))}
@@ -230,6 +211,8 @@ const ChatsPane = ({ chats, setSelectedChat, selectedChatId }) => {
                 {selectedUser ? (
                     <Textarea
                         placeholder='첫 메시지를 입력해 주세요.'
+                        value={text}
+                        onChange={handleTextChange}
                     />
                 ) : (
                     <div />

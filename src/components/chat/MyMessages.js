@@ -12,7 +12,7 @@ export default function MyProfile() {
 
   React.useEffect(() => {
 
-    socket.emit('requestChats');
+    socket.emit('requestChats'); // 서버에 채팅방 목록 요청
 
     // 서버에서 채팅방 목록을 받았을 때 실행
     socket.on('chats', (fetchedChats) => {
@@ -25,7 +25,7 @@ export default function MyProfile() {
       console.error(errorMessage);
     });
 
-  }, [socket]);
+  }, []);
 
 
   return (
