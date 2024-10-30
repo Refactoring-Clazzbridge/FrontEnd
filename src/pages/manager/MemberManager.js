@@ -4,6 +4,7 @@ import { Visibility, VisibilityOff } from "@mui/icons-material";
 import apiClient from '../../shared/apiClient';
 import { DataGrid } from '@mui/x-data-grid'; // DataGrid 임포트
 import { v4 as uuidv4 } from 'uuid'; // 고유한 ID를 생성하기 위해 uuid 패키지 사용
+import CustomSnackbar from "../../components/common/CustomSnackbar"; // 커스텀 스낵바
 
 const MemberManager = () => {
     const [open, setOpen] = useState(false);
@@ -24,6 +25,13 @@ const MemberManager = () => {
     const [events, setEvents] = useState([]);
     const [showPassword, setShowPassword] = useState(false); // 비밀번호 보이기 상태 관리
     const [courseOption, setCourseOption] = useState([]); // 강의명 목록 상태
+
+    const [openSnackbar, setOpenSnackbar] = useState(false); // 스낵바 열기 상태
+    const [snackbarMessage, setSnackbarMessage] = useState(""); // 스낵바 메시지
+    const [snackbarSeverity, setSnackbarSeverity] = useState("success"); // 스낵바 성공/실패 유무
+    const handleCloseSnackbar = () => {
+        setOpenSnackbar(false); // 스낵바 닫기
+    };
 
     // 에러 상태 관리
     const [phoneError, setPhoneError] = useState('');
@@ -130,7 +138,9 @@ const MemberManager = () => {
                     id: response.data.id || uuidv4(), // 서버가 `id`를 주지 않으면 클라이언트에서 임시로 생성
                 };
                 setEvents([...events, addedCourse]);// 응답으로 받은 새 회원 추가
-                alert('회원이 추가되었습니다.');
+                setSnackbarMessage('회원이 추가되었습니다.');
+                setSnackbarSeverity("success");
+                setOpenSnackbar(true);
                 handleClose();
                 fetchEvents(); // 추가 후 이벤트 목록 새로 고침
             })
@@ -147,7 +157,9 @@ const MemberManager = () => {
                     event.id === selectedEvent.id ? { ...event, ...updatedMember } : event
                 );
                 setEvents(updatedEvents);
-                alert('회원 정보가 수정되었습니다.');
+                setSnackbarMessage('회원 정보가 수정되었습니다.');
+                setSnackbarSeverity("success");
+                setOpenSnackbar(true);
                 handleClose();
                 fetchEvents(); // 수정 후 이벤트 목록 새로 고침
             })
@@ -174,12 +186,16 @@ const MemberManager = () => {
         const existingEmail = events.find(event => event.email === newEventEmail && (!editMode || event.id !== newEventId));
 
         if (existingMemberId) {
-            alert('이미 등록된 아이디입니다.');
+            setSnackbarMessage('이미 등록된 아이디입니다.');
+            setSnackbarSeverity("error");
+            setOpenSnackbar(true);
             return;
         }
 
         if (existingEmail) {
-            alert('이미 등록된 이메일입니다.');
+            setSnackbarMessage('이미 등록된 이메일입니다.');
+            setSnackbarSeverity("error");
+            setOpenSnackbar(true);
             return;
         }
 
@@ -190,13 +206,17 @@ const MemberManager = () => {
             );
 
             if (existingTeacherForCourse && (!editMode || existingTeacherForCourse.id !== newEventId)) {
-                alert(`해당 강의(${newEventTitle})에는 이미 강사가 배정되어 있습니다.`);
+                setSnackbarMessage(`해당 강의(${newEventTitle})에는 이미 강사가 배정되어 있습니다.`);
+                setSnackbarSeverity("error");
+                setOpenSnackbar(true);
                 return; // 강사가 이미 배정된 경우 저장 중단
             }
         }
 
         if (nameError || phoneError || emailError || passwordError || memberIdError) {
-            alert("올바른 형식으로 입력해주세요.");
+            setSnackbarMessage("올바른 형식으로 입력해주세요.");
+            setSnackbarSeverity("error");
+            setOpenSnackbar(true);
             return;
         }
 
@@ -212,7 +232,9 @@ const MemberManager = () => {
             if (newEventName.length === 0 || newEventMemberId.length === 0 || newEventPassword.length === 0 ||
                 newEventPhone.length === 0 || newEventEmail.length === 0 || newEventTitle.length === 0 ||
                 ((newEventType !== 'ROLE_TEACHER') && (newEventType !== 'ROLE_STUDENT'))) {
-                alert("입력하지 않은 값이 있습니다.");
+                setSnackbarMessage("입력하지 않은 값이 있습니다.");
+                setSnackbarSeverity("error");
+                setOpenSnackbar(true);
                 return;
             }
             addMember(newMember);
@@ -225,7 +247,9 @@ const MemberManager = () => {
         const memberCount = selectedMembers.length;
 
         if (memberCount === 0) {
-            alert("삭제할 회원을 선택하세요");
+            setSnackbarMessage("삭제할 회원을 선택하세요");
+            setSnackbarSeverity("error");
+            setOpenSnackbar(true);
             return;
         }
 
@@ -242,11 +266,15 @@ const MemberManager = () => {
                     const updatedEvents = events.filter(event => !selectedMembers.includes(event.id));
                     setEvents(updatedEvents);
                     setSelectedMembers([]); // 선택한 회원 목록 초기화
-                    alert(`${memberCount}명의 회원 삭제 성공`);
+                    setSnackbarMessage(`${memberCount}명의 회원 삭제 성공`);
+                    setSnackbarSeverity("success");
+                    setOpenSnackbar(true);
                 })
                 .catch(error => {
                     console.error('회원 정보를 삭제하지 못했습니다.', error.response.data);
-                    alert('회원 삭제 실패: ' + error.response.data.message); // 서버에서 받은 오류 메시지를 출력
+                    setSnackbarMessage('회원 삭제 실패: ' + error.response.data.message); // 서버에서 받은 오류 메시지를 출력
+                    setSnackbarSeverity("error");
+                    setOpenSnackbar(true);
                 });
         } else {
             // 사용자가 삭제를 취소했을 때의 처리
@@ -257,7 +285,9 @@ const MemberManager = () => {
     // 회원 수정 핸들러
     const editSelectedMember = () => {
         if (selectedMembers.length !== 1) {
-            alert('수정할 회원은 하나만 선택해야 합니다.');
+            setSnackbarMessage('수정할 회원은 하나만 선택해야 합니다.');
+            setSnackbarSeverity("error");
+            setOpenSnackbar(true);
             return;
         }
 
@@ -282,10 +312,15 @@ const MemberManager = () => {
         setShowPassword(!showPassword);
     };
 
-
-
     return (
         <div>
+            {/* 커스텀 스낵바 */}
+            <CustomSnackbar
+                open={openSnackbar}
+                message={snackbarMessage}
+                severity={snackbarSeverity}
+                onClose={handleCloseSnackbar}
+            />
             {/* 회원 리스트 테이블 */}
 
             <Box sx={{ height: 650, width: '100%' }}>
@@ -383,7 +418,6 @@ const MemberManager = () => {
 
                                 }
                             }
-
                         },
                         { field: 'name', headerName: '이름', flex: 1 },
                         { field: 'memberId', headerName: '아이디', flex: 1 },
@@ -408,10 +442,6 @@ const MemberManager = () => {
                     selectionModel={selectedMembers} // 선택된 ID 목록
                 />
             </Box>
-
-
-
-
 
             {/* 등록, 수정, 삭제 버튼 */}
             <Box mt={2} sx={{ display: "flex", justifyContent: "flex-end" }}>

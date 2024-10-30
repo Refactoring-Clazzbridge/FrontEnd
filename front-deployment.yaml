@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clazz-bridge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clazz-bridge
+  template:
+    metadata:
+      labels:
+        app: clazz-bridge
+    spec:
+      imagePullSecrets:
+      - name: regcred  # 생성한 Secret 이름
+      containers:
+      - name: react-container
+        image: contest78.kr.ncr.ntruss.com/contest78-docker:latest
+        ports:
+        - containerPort: 3000  # React 앱의 기본 포트

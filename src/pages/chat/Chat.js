@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
 import io from "socket.io-client";
 import '../../styles/Chat.css'
 import {
@@ -11,7 +11,7 @@ import {
 } from "@mui/material";
 import SendIcon from '@mui/icons-material/Send';
 
-const socket = io('http://localhost:3001').emit('connected', localStorage.getItem('token'));
+const socket = io('default-websocket-servic-3b8f6-100169772-9abcce8b6147.kr.lb.naverncp.com:3001').emit('connected', localStorage.getItem('token'));
 
 function Chat() {
   const [messages, setMessages] = useState([]);
@@ -40,30 +40,30 @@ function Chat() {
   };
 
   return (
-      <Box sx={{ p: 2 }}>
-        <List sx={{ maxHeight: '300px', overflowY: 'auto', backgroundColor: '#f0f0f0', borderRadius: '4px', mb: 2 }}>
-          {messages.map((msg, index) => (
-              <ListItem key={index}>
-                <ListItemText primary={msg} />
-              </ListItem>
-          ))}
-        </List>
-        <form onSubmit={handleSubmit}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <TextField
-                label="메세지를 입력하세요."
-                variant="outlined"
-                fullWidth
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                sx={{ mr: 2 }}
-            />
-            <Button variant="contained" color="primary" type="submit">
-              <SendIcon/>
-            </Button>
-          </Box>
-        </form>
-      </Box>
+    <Box sx={{ p: 2 }}>
+      <List sx={{ maxHeight: '300px', overflowY: 'auto', backgroundColor: '#f0f0f0', borderRadius: '4px', mb: 2 }}>
+        {messages.map((msg, index) => (
+          <ListItem key={index}>
+            <ListItemText primary={msg} />
+          </ListItem>
+        ))}
+      </List>
+      <form onSubmit={handleSubmit}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <TextField
+            label="메세지를 입력하세요."
+            variant="outlined"
+            fullWidth
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            sx={{ mr: 2 }}
+          />
+          <Button variant="contained" color="primary" type="submit">
+            <SendIcon />
+          </Button>
+        </Box>
+      </form>
+    </Box>
   );
 }
 
