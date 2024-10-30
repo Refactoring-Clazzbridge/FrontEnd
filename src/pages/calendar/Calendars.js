@@ -1,32 +1,65 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, momentLocalizer } from 'react-big-calendar';
-import moment from 'moment';
-import { Button, Modal, Typography, TextField, Box, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
-import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
-import apiClient from '../../shared/apiClient';
-import 'moment/locale/ko'; // 한국어 로케일 불러오기
+import { Calendar, momentLocalizer } from "react-big-calendar";
+import moment from "moment";
+import {
+  Button,
+  Modal,
+  Typography,
+  TextField,
+  Box,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from "@mui/material";
+import { LocalizationProvider, DateTimePicker } from "@mui/x-date-pickers";
+import "react-big-calendar/lib/css/react-big-calendar.css";
+import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
+import apiClient from "../../shared/apiClient";
+import "moment/locale/ko"; // 한국어 로케일 불러오기
 
-moment.locale('ko');
+moment.locale("ko");
 
 const messages = {
-  allDay: '종일',
-  previous: '이전 달',
-  next: '다음 달',
-  today: '오늘',
-  month: '월',
-  week: '주',
-  day: '일',
-  agenda: '일정',
-  date: '날짜',
-  time: '시간',
-  event: '이벤트',
-  noEventsInRange: '해당 기간에 이벤트가 없습니다.',
-  showMore: total => `+ 더보기 (${total})`,
+  allDay: "종일",
+  previous: "이전 달",
+  next: "다음 달",
+  today: "오늘",
+  month: "월",
+  week: "주",
+  day: "일",
+  agenda: "일정",
+  date: "날짜",
+  time: "시간",
+  event: "이벤트",
+  noEventsInRange: "해당 기간에 이벤트가 없습니다.",
+  showMore: (total) => `+ 더보기 (${total})`,
 };
 
 const localizer = momentLocalizer(moment);
+
+const CustomEvent = ({ event }) => (
+  <div style={{ backgroundColor: "transparent", padding: "5px" }}>
+    {" "}
+    {/* 배경색을 투명하게 설정 */}
+    <strong>{event.eventTitle}</strong>
+    <div style={{ fontSize: "10px" }}>{event.courseTitle}</div>{" "}
+    {/* 강의명 표시 */}
+  </div>
+);
+
+const colors = [
+  "#FFB3BA", // Light Red
+  "#FFDFBA", // Light Orange
+  "#FFFFBA", // Light Yellow
+  "#BAFFB3", // Light Green
+  "#BAE1FF", // Light Blue
+  "#FFBAE1", // Light Pink
+  "#FFABAB", // Light Coral
+  "#FFC3A0", // Light Salmon
+  "#D5AAFF", // Light Purple
+  "#FF677D", // Light Rose
+];
 
 const Calendars = () => {
   // 모달 상태 관리
@@ -36,11 +69,11 @@ const Calendars = () => {
   const [editMode, setEditMode] = useState(false);
 
   // 폼 입력 상태 관리
-  const [newEventcourseTitle, setNewEventcourseTitle] = useState('');
-  const [newEventEventTitle, setNewEventEventTitle] = useState('');
-  const [newEventDescription, setNewEventDescription] = useState('');
+  const [newEventcourseTitle, setNewEventcourseTitle] = useState("");
+  const [newEventEventTitle, setNewEventEventTitle] = useState("");
+  const [newEventDescription, setNewEventDescription] = useState("");
   const [newEventStart, setNewEventStart] = useState(moment());
-  const [newEventEnd, setNewEventEnd] = useState(moment().add(1, 'hour'));
+  const [newEventEnd, setNewEventEnd] = useState(moment().add(1, "hour"));
 
   const [error, setError] = useState("");
 
@@ -59,31 +92,30 @@ const Calendars = () => {
     fetchcourses();
     const fetchRole = async () => {
       try {
-        const token = localStorage.getItem('token'); // localStorage에서 token 가져오기
-        const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+        const token = localStorage.getItem("token"); // localStorage에서 token 가져오기
+        const userInfo = JSON.parse(localStorage.getItem("userInfo"));
         if (!token) {
-          console.log('No token found in localStorage');
+          console.log("No token found in localStorage");
           return;
         }
         // API 요청 보내기
-        const role = localStorage.getItem('membertype');
+        const role = localStorage.getItem("membertype");
 
         if (role !== "ROLE_ADMIN") {
-
-          apiClient.get(`user/check/${userInfo.member.id}`)
-            .then(response => {
+          apiClient
+            .get(`user/check/${userInfo.member.id}`)
+            .then((response) => {
               setCourse(response.data); // 강의 목록 설정
               console.log(response.data);
             })
-            .catch(error => {
-              console.error('강의 목록을 불러오지 못했습니다.', error);
+            .catch((error) => {
+              console.error("강의 목록을 불러오지 못했습니다.", error);
             });
         }
 
-
         setType(role); // 받은 role을 상태로 저장
       } catch (error) {
-        console.error('Error fetching role:', error);
+        console.error("Error fetching role:", error);
       }
     };
 
@@ -91,32 +123,33 @@ const Calendars = () => {
   }, []); // 빈 배열로 처음에 한 번만 실행
 
   const fetchEvents = () => {
-
-    apiClient.get('schedule')
-      .then(response => {
-        const fetchedEvents = response.data.map(event => ({
+    apiClient
+      .get("schedule")
+      .then((response) => {
+        const fetchedEvents = response.data.map((event, index) => ({
           ...event,
           start: moment(event.startDate, "YYYY-MM-DD HH:mm").toDate(),
           end: moment(event.endDate, "YYYY-MM-DD HH:mm").toDate(),
+          backgroundColor: colors[index % colors.length], // 색상 배열에서 색상 선택
         }));
-        setEvents(fetchedEvents); // 3. 상태 업데이트
+        setEvents(fetchedEvents); // 상태 업데이트
       })
-      .catch(error => {
-        console.error('이벤트 데이터를 불러오지 못했습니다.', error);
+      .catch((error) => {
+        console.error("이벤트 데이터를 불러오지 못했습니다.", error);
       });
   };
 
   const fetchcourses = () => {
     // 강의 목록을 가져오는 API 호출
-    apiClient.get('course/title')
-      .then(response => {
+    apiClient
+      .get("course/title")
+      .then((response) => {
         setcourseOptions(response.data); // 강의 목록 설정
       })
-      .catch(error => {
-        console.error('강의 목록을 불러오지 못했습니다.', error);
+      .catch((error) => {
+        console.error("강의 목록을 불러오지 못했습니다.", error);
       });
   };
-
 
   // 일정 추가 핸들러
   const handleAddEvent = () => {
@@ -124,11 +157,11 @@ const Calendars = () => {
     setSelectedEvent(null);
     setOpen(true);
     setEditMode(true);
-    setNewEventcourseTitle('');
-    setNewEventEventTitle('');
-    setNewEventDescription('');
+    setNewEventcourseTitle("");
+    setNewEventEventTitle("");
+    setNewEventDescription("");
     setNewEventStart(moment());
-    setNewEventEnd(moment().add(1, 'hour'));
+    setNewEventEnd(moment().add(1, "hour"));
   };
 
   // 모달 닫기 핸들러
@@ -137,11 +170,11 @@ const Calendars = () => {
     setSelectedEvent(null);
     setIsAddingEvent(false);
     setEditMode(false);
-    setNewEventcourseTitle('');
-    setNewEventEventTitle('');
-    setNewEventDescription('');
+    setNewEventcourseTitle("");
+    setNewEventEventTitle("");
+    setNewEventDescription("");
     setNewEventStart(moment());
-    setNewEventEnd(moment().add(1, 'hour'));
+    setNewEventEnd(moment().add(1, "hour"));
   };
 
   // 이벤트 클릭 시 이벤트 처리
@@ -178,44 +211,46 @@ const Calendars = () => {
       eventTitle: newEventEventTitle,
       description: newEventDescription,
       startDate: newEventStart.format("YYYY-MM-DD HH:mm"), // 포맷된 문자열로 변환
-      endDate: newEventEnd.format("YYYY-MM-DD HH:mm"),     // 포맷된 문자열로 변환
+      endDate: newEventEnd.format("YYYY-MM-DD HH:mm"), // 포맷된 문자열로 변환
     };
 
     if (editMode) {
       if (isAddingEvent) {
         // 새로운 이벤트 추가
-        apiClient.post('schedule', newEvent)
-          .then(response => {
+        apiClient
+          .post("schedule", newEvent)
+          .then((response) => {
             const savedEvent = {
               ...newEvent,
               id: response.data.id, // 서버에서 받은 id로 업데이트
               start: newEventStart.toDate(), // moment 객체를 JS Date 객체로 변환
-              end: newEventEnd.toDate() // moment 객체를 JS Date 객체로 변환
+              end: newEventEnd.toDate(), // moment 객체를 JS Date 객체로 변환
             };
 
             // 이벤트 목록에 새로 추가된 이벤트 반영
             setEvents([...events, savedEvent]);
-            alert('일정이 추가되었습니다.');
+            alert("일정이 추가되었습니다.");
             handleClose(); // 모달 닫기
             fetchEvents();
           })
-          .catch(error => {
-            console.error('일정 추가에 실패하였습니다.', error);
+          .catch((error) => {
+            console.error("일정 추가에 실패하였습니다.", error);
           });
       } else {
         // 기존 이벤트 수정
-        apiClient.put('schedule', newEvent)
+        apiClient
+          .put("schedule", newEvent)
           .then(() => {
-            const updatedEvents = events.map(event =>
+            const updatedEvents = events.map((event) =>
               event.id === selectedEvent.id ? { ...event, ...newEvent } : event
             );
             setEvents(updatedEvents);
-            alert('일정이 수정되었습니다.');
+            alert("일정이 수정되었습니다.");
             handleClose(); // 모달 닫기
             fetchEvents();
           })
-          .catch(error => {
-            console.error('일정 수정에 실패하였습니다.', error);
+          .catch((error) => {
+            console.error("일정 수정에 실패하였습니다.", error);
           });
       }
     }
@@ -224,16 +259,19 @@ const Calendars = () => {
   // 이벤트 삭제 핸들러
   const handleDeleteEvent = () => {
     if (selectedEvent) {
-      apiClient.delete(`schedule/${selectedEvent.id}`)
+      apiClient
+        .delete(`schedule/${selectedEvent.id}`)
         .then(() => {
-          const filteredEvents = events.filter(event => event.id !== selectedEvent.id);
+          const filteredEvents = events.filter(
+            (event) => event.id !== selectedEvent.id
+          );
           setEvents(filteredEvents);
-          alert('일정이 삭제되었습니다.');
+          alert("일정이 삭제되었습니다.");
           handleClose(); // 모달 닫기
           fetchEvents();
         })
-        .catch(error => {
-          console.error('일정 삭제에 실패하였습니다.', error);
+        .catch((error) => {
+          console.error("일정 삭제에 실패하였습니다.", error);
         });
     }
     handleClose();
@@ -241,36 +279,46 @@ const Calendars = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterMoment}>
-
-      <div style={{ height: '80vh' }}>
-        {role === "ROLE_ADMIN" ?
-          <Button variant="outlined" color="secondary" onClick={handleAddEvent} style={{ marginBottom: '10px' }}>
+      <div style={{ height: "80vh" }}>
+        {role === "ROLE_ADMIN" ? (
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={handleAddEvent}
+            style={{ marginBottom: "10px" }}
+          >
             일정 추가
           </Button>
-          : ""}
+        ) : (
+          ""
+        )}
         <Calendar
           localizer={localizer}
           events={events
-            .filter(event => {
+            .filter((event) => {
               // 권한에 맞는 일정을 필터링
-              // 예: 사용자 권한이 'admin'인 경우 모든 이벤트를 보여주고, 
-              // 권한이 'user'인 경우 특정 조건을 만족하는 이벤트만 보여주기
-              if (role === 'ROLE_ADMIN') {
-                return true;  // 'admin' 권한은 모든 일정 보여줌
-              } else if (role === 'ROLE_STUDENT' || role === 'ROLE_TEACHER') {
-                return event.courseTitle === course || event.courseTitle === "전체 일정";
+              if (role === "ROLE_ADMIN") {
+                return true; // 'admin' 권한은 모든 일정 보여줌
+              } else if (role === "ROLE_STUDENT" || role === "ROLE_TEACHER") {
+                return (
+                  event.courseTitle === course ||
+                  event.courseTitle === "전체 일정"
+                );
               }
-              return false;  // 기본적으로 권한이 없으면 이벤트를 안 보여줌
+              return false; // 기본적으로 권한이 으면 이벤트를 안 보여줌
             })
-            .map(event => ({
+            .map((event) => ({
               ...event,
-              title: event.eventTitle,
+              title: event.eventTitle, // 제목은 그대로 유지
             }))}
           startAccessor="start"
           endAccessor="end"
-          style={{ height: '100%' }}
+          style={{ height: "100%" }}
           onSelectEvent={handleSelectEvent}
           messages={messages} // 여기에 메시지 객체를 추가
+          components={{
+            event: CustomEvent, // 커스텀 이벤트 컴포넌트 사용
+          }}
         />
 
         <Modal
@@ -280,23 +328,33 @@ const Calendars = () => {
           aria-labelledby="modal-eventTitle"
           aria-describedby="modal-description"
         >
-          <div style={{
-            padding: '20px',
-            background: 'white',
-            borderRadius: '8px',
-            maxWidth: '400px',
-            margin: 'auto',
-            top: '30%',
-            position: 'relative',
-          }}>
+          <div
+            style={{
+              padding: "20px",
+              background: "white",
+              borderRadius: "8px",
+              maxWidth: "400px",
+              margin: "auto",
+              top: "30%",
+              position: "relative",
+            }}
+          >
             {editMode ? (
               <>
-                <Typography id="modal-eventTitle" variant="h6" style={{ marginBottom: "14px" }}>
-                  {isAddingEvent ? '새 일정 추가' : '이벤트 수정'}
+                <Typography
+                  id="modal-eventTitle"
+                  variant="h6"
+                  style={{ marginBottom: "14px" }}
+                >
+                  {isAddingEvent ? "새 일정 추가" : "이벤트 수정"}
                 </Typography>
 
                 {/* 강의 드롭다운 */}
-                <FormControl fullWidth style={{ marginBottom: '20px' }} variant="outlined">
+                <FormControl
+                  fullWidth
+                  style={{ marginBottom: "20px" }}
+                  variant="outlined"
+                >
                   <InputLabel>강의</InputLabel>
                   <Select
                     label="강의"
@@ -317,23 +375,29 @@ const Calendars = () => {
                   label="제목"
                   value={newEventEventTitle}
                   onChange={(e) => setNewEventEventTitle(e.target.value)}
-                  style={{ marginBottom: '20px' }}
+                  style={{ marginBottom: "20px" }}
                 />
                 <TextField
                   fullWidth
                   label="설명"
                   value={newEventDescription}
                   onChange={(e) => setNewEventDescription(e.target.value)}
-                  style={{ marginBottom: '20px' }}
-                  multiline  // TextField를 textarea로 변경
-                  rows={4}   // 표시할 줄 수 (필요에 따라 조정 가능)
+                  style={{ marginBottom: "20px" }}
+                  multiline // TextField를 textarea로 변경
+                  rows={4} // 표시할 줄 수 (필요에 따라 조정 가능)
                 />
 
                 <DateTimePicker
                   label="시작 날짜"
                   value={newEventStart}
                   onChange={(newValue) => setNewEventStart(moment(newValue))}
-                  renderInput={(params) => <TextField {...params} fullWidth style={{ marginBottom: '20px' }} />}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      fullWidth
+                      style={{ marginBottom: "20px" }}
+                    />
+                  )}
                 />
                 <br />
                 <br />
@@ -341,10 +405,24 @@ const Calendars = () => {
                   label="종료 날짜"
                   value={newEventEnd}
                   onChange={(newValue) => setNewEventEnd(moment(newValue))}
-                  renderInput={(params) => <TextField {...params} fullWidth style={{ marginBottom: '20px' }} />}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      fullWidth
+                      style={{ marginBottom: "20px" }}
+                    />
+                  )}
                 />
                 {error && (
-                  <Typography color="error" variant="body2" style={{ marginBottom: '20px', marginTop: '12px', marginLeft: '4px' }}>
+                  <Typography
+                    color="error"
+                    variant="body2"
+                    style={{
+                      marginBottom: "20px",
+                      marginTop: "12px",
+                      marginLeft: "4px",
+                    }}
+                  >
                     {error}
                   </Typography>
                 )}
@@ -352,55 +430,63 @@ const Calendars = () => {
             ) : (
               <>
                 <Typography id="modal-courseTitle" variant="h6">
-                  {selectedEvent ? selectedEvent.courseTitle : ''}
+                  {selectedEvent ? selectedEvent.courseTitle : ""}
                 </Typography>
                 <Typography id="modal-eventTitle" variant="h6">
-                  {selectedEvent ? selectedEvent.eventTitle : ''}
+                  {selectedEvent ? selectedEvent.eventTitle : ""}
                 </Typography>
                 <Typography
                   id="modal-description"
                   style={{
-                    whiteSpace: 'pre-wrap',  // 연속된 띄어쓰기 및 줄바꿈 모두 허용
-                    overflow: 'hidden',       // 넘치는 내용 숨기기
-                    textOverflow: 'ellipsis',  // 넘치는 내용에 ... 표시
-                    display: 'block',         // 블록 요소로 설정
-                    maxHeight: '200px',      // 최대 높이 설정 (원하는 높이로 조정 가능)
-                    overflowY: 'auto',       // 세로 방향 스크롤
+                    whiteSpace: "pre-wrap", // 연속된 띄어쓰기 및 줄바꿈 모두 허용
+                    overflow: "hidden", // 넘치는 내용 숨기기
+                    textOverflow: "ellipsis", // 넘치는 내용에 ... 표시
+                    display: "block", // 블록 요소로 설정
+                    maxHeight: "200px", // 최대 높이 설정 (원하는 높이로 조정 가능)
+                    overflowY: "auto", // 세로 방향 스크롤
                   }}
                 >
-                  {selectedEvent ? selectedEvent.description : ''}
+                  {selectedEvent ? selectedEvent.description : ""}
                 </Typography>
-
 
                 <Typography>
-                  시작 시간: {selectedEvent ? moment(selectedEvent.start).format('YYYY.MM.DD HH:mm') : ''}
+                  시작 시간:{" "}
+                  {selectedEvent
+                    ? moment(selectedEvent.start).format("YYYY.MM.DD HH:mm")
+                    : ""}
                 </Typography>
                 <Typography>
-                  종료 시간: {selectedEvent ? moment(selectedEvent.end).format('YYYY.MM.DD HH:mm') : ''}
+                  종료 시간:{" "}
+                  {selectedEvent
+                    ? moment(selectedEvent.end).format("YYYY.MM.DD HH:mm")
+                    : ""}
                 </Typography>
 
-                {role === "ROLE_ADMIN" ?
-                  <div style={{ marginTop: '20px' }}>
+                {role === "ROLE_ADMIN" ? (
+                  <div style={{ marginTop: "20px" }}>
                     <Button
                       variant="outlined"
                       onClick={handleEditEvent}
-                      style={{ marginRight: '10px' }}
+                      style={{ marginRight: "10px" }}
                     >
                       변경
                     </Button>
-                    <Button
-                      variant="outlined"
-                      onClick={handleDeleteEvent}
-                    >
+                    <Button variant="outlined" onClick={handleDeleteEvent}>
                       삭제
                     </Button>
                   </div>
-                  : ""}
+                ) : (
+                  ""
+                )}
               </>
             )}
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
               {editMode && (
-                <Button onClick={handleSaveEvent} variant="outlined" sx={{ mr: 1 }}>
+                <Button
+                  onClick={handleSaveEvent}
+                  variant="outlined"
+                  sx={{ mr: 1 }}
+                >
                   저장
                 </Button>
               )}
@@ -408,7 +494,6 @@ const Calendars = () => {
                 닫기
               </Button>
             </Box>
-
           </div>
         </Modal>
       </div>
