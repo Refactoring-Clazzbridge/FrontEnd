@@ -279,68 +279,70 @@ export default function StudentRoom() {
   const [isOnline, setIsOnline] = useState(false); // 좌석 상태 관리
 
   useEffect(() => {
-    // Load selected course from localStorage on mount
-    const storedCourseId = localStorage.getItem("selectedCourseId");
-    if (storedCourseId) {
-      setSelectedCourseId(storedCourseId);
-      fetchSeatsByCourse(storedCourseId);
-    }
-
-    // Additional setup logic here...
-  }, []);
-
-  useEffect(() => {
-    // 컴포넌트가 마운트될 때 localStorage에서 좌석 정보를 가져옴
-    const storedSeatId = localStorage.getItem("seatInfo");
-    const seatData = JSON.parse(storedSeatId);
-
-    console.log(seatData.id);
-    if (seatData.id) {
-      setUserSeat(seatData.id); // 저장된 좌석 ID를 상태로 설정
-      console.log(localStorage.getItem("userInfo"));
-      console.log(seatData.id);
-    } else {
-      setUserSeat(null);
-      console.log(localStorage.getItem("userInfo"));
-      console.log(seatData.id);
-    }
-
-    // debug
-    const fetchCourseAndSeats = async () => {
+    const fetchInitialData = async () => {
       const token = localStorage.getItem("token");
+      if (!token) return;
 
-      if (token) {
-        const decodedToken = jwtDecode(token);
-        const memberType = decodedToken.role;
+      const decodedToken = jwtDecode(token);
+      const memberType = decodedToken.role;
 
-        setCurrentUser({
-          memberId: decodedToken.id,
-          memberType: memberType,
-          courseId: null,
-        });
+      // 현재 사용자 정보 설정
+      setCurrentUser({
+        memberId: decodedToken.id,
+        memberType: memberType,
+        courseId: null,
+      });
 
-        if (memberType === "ROLE_STUDENT" || memberType === "ROLE_TEACHER") {
-          try {
-            let courseId = null;
-            if (memberType === "ROLE_STUDENT") {
-              courseId = await getCourseId();
-            }
-            if (memberType === "ROLE_TEACHER") {
-              courseId = await getTeacherByCourseId();
-            }
-            setSelectedCourseId(courseId);
-            fetchSeatsByCourse(courseId); // courseId로 좌석 정보 가져오기
-          } catch (error) {
-            console.error("Error fetching course ID:", error);
+      // 좌석 정보 확인
+      const storedSeatId = localStorage.getItem("seatInfo");
+      if (storedSeatId) {
+        try {
+          const seatData = JSON.parse(storedSeatId);
+          if (seatData && seatData.id) {
+            setUserSeat(seatData.id);
+          } else {
+            setUserSeat(null);
           }
-        } else {
-          fetchStudentCourse();
+        } catch (error) {
+          console.error("Error parsing seat info:", error);
+          setUserSeat(null);
+        }
+      } else {
+        setUserSeat(null);
+      }
+
+      // 강의실 정보 가져오기
+      if (memberType === "ROLE_ADMIN") {
+        // 관리자는 마지막으로 선택한 강의실 보기
+        const storedCourseId = localStorage.getItem("selectedCourseId");
+        if (storedCourseId) {
+          setSelectedCourseId(storedCourseId);
+          await fetchSeatsByCourse(storedCourseId);
+        }
+      } else if (
+        memberType === "ROLE_STUDENT" ||
+        memberType === "ROLE_TEACHER"
+      ) {
+        // 학생/교사는 자신의 강의실 보기
+        try {
+          let fetchedCourseId = null;
+          if (memberType === "ROLE_STUDENT") {
+            fetchedCourseId = await getCourseId();
+          } else {
+            fetchedCourseId = await getTeacherByCourseId();
+          }
+          if (fetchedCourseId) {
+            setSelectedCourseId(fetchedCourseId);
+            await fetchSeatsByCourse(fetchedCourseId);
+          }
+        } catch (error) {
+          console.error("Error fetching course ID:", error);
         }
       }
     };
 
-    fetchCourseAndSeats(); // 비동기 함수 호출
-  }, []);
+    fetchInitialData();
+  }, []); // 컴포넌트 마운트 시 한 번만 실행
 
   const handleStudentSeatRegistration = async (seatId) => {
     const seatUpdateDTO = {
@@ -383,8 +385,9 @@ export default function StudentRoom() {
         // 좌석 해제 후 최신 좌석 정보를 다시 불러와서 로컬 상태와 동기화
         await fetchSeatsByCourse(selectedCourseId);
 
-        // 좌석 상태 업데이트
+        // 좌석 상태 및 localStorage 업데이트
         setUserSeat(null);
+        localStorage.removeItem("seatInfo"); // seatInfo 완전히 제거
         localStorage.removeItem("userHasSeat");
 
         setReleaseDialogOpen(false);
@@ -486,11 +489,19 @@ export default function StudentRoom() {
 
       const decodedToken = jwtDecode(token);
       if (decodedToken.role === "ROLE_STUDENT") {
-        const storedSeatId = JSON.parse(localStorage.getItem("seatInfo")).id;
-        console.log(storedSeatId);
-        if (storedSeatId) {
+        const storedSeatInfo = localStorage.getItem("seatInfo");
+        if (storedSeatInfo) {
           try {
-            await updateStudentOnlineStatus(storedSeatId, true);
+            const seatData = JSON.parse(storedSeatInfo);
+            if (seatData && seatData.id) {
+              // 페이지 언로드시에만 오프라인으로 설정하도록 변경
+              window.addEventListener("beforeunload", () => {
+                updateStudentOnlineStatus(seatData.id, false);
+              });
+
+              // 컴포넌트 마운트시 온라인으로 설정
+              await updateStudentOnlineStatus(seatData.id, true);
+            }
           } catch (error) {
             console.error("Failed to update online status:", error);
           }
@@ -499,16 +510,6 @@ export default function StudentRoom() {
     };
 
     handleUserOnlineStatus();
-
-    // 페이지를 떠날 때 오프라인으로 상태 변경
-    return () => {
-      const storedSeatId = localStorage.getItem("seatInfo").id;
-      if (storedSeatId) {
-        updateStudentOnlineStatus(storedSeatId, false).catch((error) =>
-          console.error("Failed to update offline status:", error)
-        );
-      }
-    };
   }, []);
 
   const fetchCourses = useCallback(async () => {
