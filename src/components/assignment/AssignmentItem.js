@@ -53,6 +53,8 @@ export default function AssignmentItem({
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [assignmentToDelete, setAssignmentToDelete] = useState(null); // 삭제할 과제 ID 저장
+  const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false); // 강사용 제출 내용 확인 모달
+  const [submissionStudent, setSubmissionStudent] = useState(""); // 제출 내용 저장
 
   const openDeleteModal = (assignmentId) => {
     setAssignmentToDelete(assignmentId);
@@ -61,6 +63,16 @@ export default function AssignmentItem({
   const closeDeleteModal = () => {
     setIsDeleteModalOpen(false);
     setAssignmentToDelete(null);
+  };
+
+  const openSubmissionModal = (student) => {
+    setSubmissionStudent(student);
+    setIsSubmissionModalOpen(true);
+  };
+
+  const closeSubmissionModal = () => {
+    setIsSubmissionModalOpen(false);
+    setSubmissionStudent(null);
   };
 
   useEffect(() => {
@@ -116,6 +128,7 @@ export default function AssignmentItem({
               const response = await getStudentsByCourseId(
                 assignment.assignmentId
               );
+              console.log(response, "response");
               return {
                 assignmentId: assignment.assignmentId,
                 students: response,
@@ -366,9 +379,22 @@ export default function AssignmentItem({
                   currentUser.member.memberType === "ROLE_TEACHER" && (
                     <Box sx={{ borderTop: "1px solid #e0e0e0" }}>
                       <Typography
-                        sx={{ fontSize: "12px", marginTop: 1, marginBottom: 1 }}
+                        sx={{
+                          fontSize: "12px",
+                          marginTop: 1,
+                          marginBottom: "2px",
+                        }}
                       >
                         총 수강생 수: {assignmentStudents.length}명
+                      </Typography>
+                      <Typography
+                        sx={{
+                          fontSize: "12px",
+                          color: "gray",
+                          marginBottom: 1,
+                        }}
+                      >
+                        수강생 이름을 클릭해 제출 내용을 확인해보세요!
                       </Typography>
 
                       <Box
@@ -425,7 +451,15 @@ export default function AssignmentItem({
                                         marginRight: 8,
                                       }}
                                     />
-                                    <Typography sx={{ fontWeight: 600 }}>
+                                    <Typography
+                                      onClick={() =>
+                                        openSubmissionModal(student)
+                                      }
+                                      sx={{
+                                        fontWeight: 600,
+                                        cursor: "pointer",
+                                      }}
+                                    >
                                       {student.name}
                                     </Typography>
                                   </Box>
@@ -571,6 +605,64 @@ export default function AssignmentItem({
               삭제하기
             </Button>
           </Box>
+        </Box>
+      </CustomModal>
+
+      <CustomModal
+        isOpen={isSubmissionModalOpen}
+        closeModal={closeSubmissionModal}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            margin: "auto",
+            width: "100%",
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "column",
+            gap: "10px",
+          }}
+        >
+          <h3>
+            {submissionStudent ? submissionStudent.name : ""}님의 제출 내용
+          </h3>
+          <Box
+            sx={{
+              width: "100%",
+              border: "1px solid #e0e0e0",
+              borderRadius: 1,
+              padding: 2,
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            <Typography
+              dangerouslySetInnerHTML={{
+                __html: sanitizer(
+                  `${submissionStudent ? submissionStudent.content : ""}`
+                ),
+              }}
+            ></Typography>
+          </Box>
+          <Box
+            sx={{ width: "100%", display: "flex", justifyContent: "flex-end" }}
+          >
+            <Typography sx={{ fontSize: "12px", color: "gray" }}>
+              제출 날짜:{" "}
+              {submissionStudent ? submissionStudent.submissionDate : ""}
+            </Typography>
+          </Box>
+          <Button
+            variant="outlined"
+            onClick={closeSubmissionModal}
+            sx={{
+              width: "120px",
+              height: "40px",
+              borderColor: "#34495e",
+              color: "#34495e",
+            }}
+          >
+            닫기
+          </Button>
         </Box>
       </CustomModal>
     </Box>
