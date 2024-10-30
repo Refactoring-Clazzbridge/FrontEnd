@@ -453,52 +453,48 @@ export default function QuestionBoard() {
       showSnackbar("답변 등록 권한이 없습니다.", "error");
       return;
     }
-  
+
     if (!newAnswer.trim()) {
       showSnackbar("답변 내용을 입력하세요.", "warning");
       return;
     }
-  
+
     if (!userInfo?.member?.id) {
       showSnackbar("사용자 정보가 없습니다. 로그인 해주세요.", "error");
       return;
     }
-  
+
     try {
-      // 현재 한국 시간을 ISO 문자열로 생성
-      const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
-      
       const response = await saveAnswerApi({
         teacherId: userInfo.member.id,
         questionId: selectedRow.id,
         content: newAnswer,
       });
-  
-      // 새 답변 객체 생성 (서버 응답의 시간 사용 또는 현재 시간 사용)
+
+      // 새 답변 객체 생성
       const newAnswerObj = {
         ...response,
         id: response.id,
         content: newAnswer,
         teacherId: userInfo.member.id,
         teacherName: userInfo.member.name,
-        createdAt: response.createdAt || now.toISOString(), // 서버 응답의 시간이 없으면 현재 시간 사용
+        createdAt: new Date().toISOString(),
       };
-  
-      // 새 답변을 기존 답변 목록 맨 앞에 추가
+
+      // 직접 answers 상태 업데이트, fetchAnswers 호출하지 않음
       setAnswers((prevAnswers) => [newAnswerObj, ...prevAnswers]);
-  
-      // 질문 해결 상태 업데이트
+
       setSelectedRow((prev) => ({
         ...prev,
         solved: true,
       }));
-  
+
       setRows((prevRows) =>
         prevRows.map((row) =>
           row.id === selectedRow.id ? { ...row, solved: true } : row
         )
       );
-  
+
       showSnackbar("답변이 등록되었습니다.");
       setNewAnswer("");
     } catch (error) {
@@ -854,13 +850,15 @@ export default function QuestionBoard() {
           marginBottom: 2,
         }}
       >
-        <Button
-          variant="outlined"
-          sx={{ width: "38px", height: "38px" }}
-          onClick={() => setIsModalOpen(true)}
-        >
-          <CreateIcon />
-        </Button>
+        {userInfo?.member?.memberType === "ROLE_STUDENT" && (
+          <Button
+            variant="outlined"
+            sx={{ width: "38px", height: "38px" }}
+            onClick={() => setIsModalOpen(true)}
+          >
+            <CreateIcon />
+          </Button>
+        )}
         <Button
           variant="outlined"
           sx={{ width: "38px", height: "38px" }}
@@ -1443,7 +1441,7 @@ export default function QuestionBoard() {
                                 textAlign: "left",
                               }}
                             >
-                              {formatDistanceToNow(new Date(answer.createdAt), {
+                              {/* {formatDistanceToNow(new Date(answer.createdAt), {
                                 addSuffix: true,
                                 locale: ko,
                                 includeSeconds: true,
@@ -1453,7 +1451,7 @@ export default function QuestionBoard() {
                                     timeZone: "Asia/Seoul",
                                   })
                                 ),
-                              })}
+                              })} */}
                             </Typography>
 
                             {canShowMenu(answer) && (

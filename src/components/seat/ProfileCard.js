@@ -26,7 +26,7 @@ import {
   getCourseId,
   getTeacherByCourseId,
 } from "../../services/apis/studentCourse/get";
-import socket from '../../utils/socket'
+import socket from "../../utils/socket";
 
 function ProfileCard({
   seatId,
@@ -63,8 +63,8 @@ function ProfileCard({
             position: "absolute",
             top: 0,
             left: 0,
-            width: "100%",
-            height: "100%",
+            width: "110%",
+            height: "110%",
             borderRadius: "50%",
             animation: "ripple 1.2s infinite ease-in-out",
             border: "1px solid currentColor",
@@ -87,11 +87,11 @@ function ProfileCard({
   return (
     <Card
       sx={{
-        marginTop: "50px",
+        marginTop: "10px",
         borderRadius: "8px",
-        width: "150px",
+        width: "200px",
         textAlign: "center",
-        height: "110px",
+        height: "145px",
         boxShadow: isSelf
           ? "0 1px 0px rgba(0, 0, 0, 0.2)"
           : "0 1px 0px rgba(0, 0, 0, 0.1)",
@@ -154,12 +154,12 @@ function ProfileCard({
             marginLeft: "-9px",
             marginRight: "-9px",
             top: "-6px",
-            height: "24px",
+            height: "30px",
           }}
         >
           <Typography
             sx={{
-              fontSize: "13px",
+              fontSize: "15px",
               fontWeight: "500",
               color: isGoodOnline ? "#333" : "#b0b0b0",
               margin: "8px",
@@ -180,18 +180,20 @@ function ProfileCard({
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              top: "7px",
+              top: "14px",
             }}
           >
             {isEmpty && !userHasSeat && isStudent ? (
               <AddIcon
                 sx={{
                   position: "absolute",
-                  height: "29px", // 아이콘 크기 증가
+                  height: "29px",
                   width: "29px",
                   color: "darkGray",
-                  marginTop: "50px",
+                  marginTop: "75px",
+                  cursor: "pointer", // 커서 스타일 추가
                 }}
+                onClick={() => onRegisterSeatClick()} // 빈 좌석 클릭 이벤트
               />
             ) : !isEmpty ? (
               <StyledBadge
@@ -201,8 +203,8 @@ function ProfileCard({
               >
                 <Avatar
                   sx={{
-                    width: "36px", // 아바타 크기 증가
-                    height: "36px",
+                    width: "48px",
+                    height: "48px",
                     filter: isOffline ? "grayscale(100%)" : "none",
                     cursor: "pointer",
                     border: "1px solid #ddd",
@@ -210,6 +212,31 @@ function ProfileCard({
                   }}
                   src={imgSrc}
                   alt={`${name}'s profile`}
+                  onClick={
+                    isTeacher
+                      ? () =>
+                          openModal(
+                            seatId,
+                            name,
+                            email,
+                            github,
+                            phone,
+                            bio,
+                            imgSrc,
+                            isSelf
+                          )
+                      : () =>
+                          openModal(
+                            seatId,
+                            name,
+                            email,
+                            github,
+                            phone,
+                            bio,
+                            imgSrc,
+                            isSelf
+                          )
+                  }
                 />
               </StyledBadge>
             ) : null}
@@ -218,8 +245,8 @@ function ProfileCard({
         {(!isEmpty || isTeacher || isAdmin) && (
           <Typography
             sx={{
-              marginTop: "12px",
-              fontSize: "14px",
+              marginTop: "20px",
+              fontSize: "16px",
               fontWeight: "600",
               color: isGoodOnline ? "#333" : "#b0b0b0",
             }}
@@ -510,16 +537,26 @@ export default function StudentRoom() {
     try {
       const response = await apiClient.get(`/seat/course/${courseId}`);
       let redis_response;
-      await socket.emit('fetchStudentData', courseId).then(() => {
-        try {
-          redis_response = socket.on('fetchedStudentData', async () => {
 
-          })  
-        } catch (e) {
-          console.error(e);
-        }
-      })
+      // 데이터 요청
+      socket.emit("fetchStudentData", courseId);
 
+      // 데이터 수신
+      socket.on("fetchedStudentData", (data) => {
+        redis_response = data;
+        console.log(redis_response); // 확인용 로그
+
+        // 데이터 변환
+        const processedData = redis_response.map((item) => ({
+          id: item.id,
+          isUnderstanding: item.isUnderstanding === "true",
+          isRaisedHand: item.isRaisedHand === "true",
+        }));
+
+        // 추가적으로 processedData를 활용할 로직을 여기에 작성
+      });
+
+      // 좌석 정렬 및 상태 업데이트
       const sortedSeats = response.data.sort(
         (a, b) => a.seatNumber - b.seatNumber
       );
@@ -598,7 +635,7 @@ export default function StudentRoom() {
       {currentUser && currentUser.memberType === "ROLE_ADMIN" && (
         <Box
           sx={{
-            position: "fixed", // 화면에 고정
+            position: "flex", // 화면에 고정
             top: 80, // 화면 위쪽에서 20px 내려오도록 설정
             right: 20, // 화면 오른쪽에서 20px 떨어지도록 설정
             display: "flex",
@@ -606,7 +643,7 @@ export default function StudentRoom() {
             gap: 2, // 버튼 간 간격 설정
             alignItems: "center",
             padding: 2,
-            marginBottom: "-10px",
+            marginBottom: "50px",
             backgroundColor: "white",
             borderRadius: 1,
             boxShadow: 0, // 그림자 효과로 돋보이게
@@ -615,7 +652,7 @@ export default function StudentRoom() {
         >
           {/* 강의 선택 드롭다운 */}
           <TextField
-            sx={{ minWidth: "300px" }}
+            sx={{ minWidth: { xs: "170px", sm: "300px" } }}
             select
             id="courseSelect"
             label="강의 선택"
@@ -653,11 +690,11 @@ export default function StudentRoom() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(6, 200px)",
-            gap: "12px",
-            padding: "16px",
+            gap: "0px",
+            padding: "0px",
             justifyContent: "center",
-            maxWidth: "1400px",
+            maxWidth: "1320px",
+            minWidth: "200px", // 최소 너비로 2열 유지
             margin: "0 auto",
             marginTop:
               currentUser &&
@@ -665,6 +702,7 @@ export default function StudentRoom() {
                 currentUser.memberType === "ROLE_TEACHER")
                 ? "40px"
                 : "0",
+            gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
           }}
         >
           {profiles.map((profile, index) => (
@@ -696,9 +734,7 @@ export default function StudentRoom() {
               isAdmin={currentUser.memberType === "ROLE_ADMIN"}
               isTeacher={currentUser.memberType === "ROLE_TEACHER"}
               isStudent={currentUser.memberType === "ROLE_STUDENT"}
-              // onRegisterSeatClick={() => handleSeatRegistration(profile.id)}
               onRegisterSeatClick={() => {
-                console.log(profile, "profile");
                 setRegisterDialogOpen(true);
                 setSelectedSeat(profile.seatNumber);
                 setSeatId(profile.id);
