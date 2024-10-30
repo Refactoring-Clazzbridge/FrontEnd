@@ -1,7 +1,7 @@
 import axios from "../../../shared/apiClient";
 
 export const savePost = async (data) => {
-  const { title, content, boardId: boardTypeId, courseId } = data;
+  const { title, content, boardId: boardTypeId, userCourseId: courseId } = data;
   const savedPost = {
     title,
     content,
@@ -9,7 +9,7 @@ export const savePost = async (data) => {
     courseId,
   };
 
-  console.log("savedPost = ", savePost);
+  console.log("savedPost = ", savedPost);
 
   try {
     const response = await axios.post(`posts`, savedPost);

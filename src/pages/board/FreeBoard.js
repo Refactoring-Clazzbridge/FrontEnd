@@ -20,6 +20,7 @@ import CustomModal from "../../components/common/CustomModal";
 import { getUserCourseFreePosts } from "../../services/apis/post/get";
 import { savePost } from "../../services/apis/post/post";
 import { deletePost as deletePostApi } from "../../services/apis/post/delete";
+import { getCourseIdForUser } from "../../services/apis/course/get";
 import { updatePost } from "../../services/apis/post/put";
 import { getBoardType } from "../../services/apis/boardType/get";
 import PostComment from "../../components/comment/PostComment";
@@ -55,6 +56,7 @@ const columns = [
 export default function FreeBoard() {
   const [currentUser, setCurrentUser] = useState(null);
   const [rows, setRows] = useState([]); // 상태 추가
+  const [userCourseId, setUserCourseId] = useState(null);
   const [openDrawer, setOpenDrawer] = useState(false); // Drawer 열기 상태
   const [selectedRow, setSelectedRow] = useState(null); // 선택된 행 데이터
   const [openSuccessSnackbar, setOpenSuccessSnackbar] = useState(false); // Snackbar 열기 상태
@@ -73,6 +75,8 @@ export default function FreeBoard() {
 
   const fetchBoardTypes = useCallback(async () => {
     try {
+      const userCourseId = await getCourseIdForUser();
+      setUserCourseId(userCourseId);
       const data = await getBoardType(); // API 호출
       setBoardTypes(data); // 카테고리 데이터 상태에 저장
       console.log(data);
@@ -92,7 +96,7 @@ export default function FreeBoard() {
   useEffect(() => {
     fetchBoardTypes();
     fetchData();
-  }, [fetchData, fetchBoardTypes]); // 컴포넌트 마운트 시 호출
+  }, [fetchData, fetchBoardTypes, currentUser]); // 컴포넌트 마운트 시 호출
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -165,6 +169,7 @@ export default function FreeBoard() {
     title,
     content,
     boardId,
+    userCourseId,
   };
 
   const postSave = async () => {
