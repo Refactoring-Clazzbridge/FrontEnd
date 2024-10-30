@@ -166,13 +166,28 @@ export default function FreeBoardData() {
   const [isEditing, setIsEditing] = useState(false); // 수정 모드 상태 추가
 
   const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setTitle("");
+    setBoardId("");
+    setContent("");
+  };
 
   const openDeleteModal = () => setIsDeleteModalOpen(true);
-  const closeDeleteModal = () => setIsDeleteModalOpen(false);
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setTitle("");
+    setBoardId("");
+    setContent("");
+  };
 
   const openUpdateModal = () => setIsUpdateModalOpen(true);
-  const closeUpdateModal = () => setIsUpdateModalOpen(false);
+  const closeUpdateModal = () => {
+    setIsUpdateModalOpen(false);
+    setTitle("");
+    setBoardId("");
+    setContent("");
+  };
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -196,6 +211,9 @@ export default function FreeBoardData() {
       setIsUpdateModalOpen(false);
       setSuccessMessage("게시물이 성공적으로 수정되었습니다."); // 메시지 설정
       setOpenSuccessSnackbar(true); // Snackbar 열기
+      setTitle("");
+      setBoardId("");
+      setContent("");
     } catch (error) {
       console.log(error, "updateError");
       switch (error.response.status) {

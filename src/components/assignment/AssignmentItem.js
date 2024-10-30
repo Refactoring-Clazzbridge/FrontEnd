@@ -16,6 +16,8 @@ import CustomSnackbar from "../common/CustomSnackbar";
 import { Box, List, ListItem } from "@mui/material";
 import ReactQuill from "react-quill";
 import hljs from "highlight.js";
+import { deleteAssignment } from "../../services/apis/assignment/delete";
+import CustomModal from "../../components/common/CustomModal";
 import "react-quill/dist/quill.snow.css";
 import "highlight.js/styles/github.css";
 import "../../styles/assignment.css";
@@ -41,6 +43,7 @@ export default function AssignmentItem({
   currentUser,
   courseId,
   studentCourseId,
+  fetchAssignments,
   assignments, // assignments의 기본값을 빈 배열로 설정
 }) {
   const [submissions, setSubmissions] = useState([]); // 초기값은 빈 배열
@@ -48,6 +51,17 @@ export default function AssignmentItem({
   const [students, setStudents] = useState([]); // 수강생 리스트 상태
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [assignmentToDelete, setAssignmentToDelete] = useState(null); // 삭제할 과제 ID 저장
+
+  const openDeleteModal = (assignmentId) => {
+    setAssignmentToDelete(assignmentId);
+    setIsDeleteModalOpen(true);
+  };
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setAssignmentToDelete(null);
+  };
 
   useEffect(() => {
     const fetchSubmissions = async () => {
@@ -154,6 +168,22 @@ export default function AssignmentItem({
       } catch (error) {
         console.error("과제 제출 중 오류 발생", error);
         showSnackbar("과제 제출이 실패했습니다.", "error");
+      }
+    }
+  };
+
+  const handleDelete = async () => {
+    if (assignmentToDelete) {
+      try {
+        await deleteAssignment(assignmentToDelete); // API 호출로 삭제
+        showSnackbar("과제가 삭제되었습니다.", "success");
+        closeDeleteModal(); // 모달 닫기
+        setAssignmentToDelete(null);
+        await fetchAssignments();
+      } catch (error) {
+        console.error("과제 삭제 중 오류 발생", error);
+        showSnackbar("과제 삭제에 실패했습니다.", "error");
+        setAssignmentToDelete(null);
       }
     }
   };
@@ -461,6 +491,17 @@ export default function AssignmentItem({
                           </List>
                         </Box>
                       </Box>
+                      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                        <Button
+                          onClick={() =>
+                            openDeleteModal(assignment.assignmentId)
+                          }
+                          variant="outlined"
+                          color="error"
+                        >
+                          삭제
+                        </Button>
+                      </Box>
                     </Box>
                   )}
               </AccordionDetails>
@@ -476,6 +517,62 @@ export default function AssignmentItem({
         severity={snackbarSeverity}
         onClose={handleCloseSnackbar}
       />
+
+      <CustomModal isOpen={isDeleteModalOpen} closeModal={closeDeleteModal}>
+        <Box
+          sx={{
+            display: "flex",
+            margin: "auto",
+            width: "100%",
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "column",
+            gap: "10px",
+          }}
+        >
+          <h3>과제 삭제하기</h3>
+          <p>해당 과제를 삭제하시겠습니까?</p>
+
+          <Box
+            sx={{
+              display: "flex",
+              width: "100%",
+              alignItems: "center",
+              justifyContent: "center",
+              flexDirection: "row",
+              gap: "24px",
+              margin: "16px 0",
+            }}
+          >
+            <Button
+              variant="outlined"
+              onClick={closeDeleteModal}
+              sx={{
+                width: "120px",
+                height: "40px",
+                borderColor: "#34495e",
+                color: "#34495e",
+              }}
+            >
+              취소
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => {
+                handleDelete(assignmentToDelete);
+              }}
+              sx={{
+                width: "120px",
+                height: "40px",
+                backgroundColor: "#34495e",
+                fontWeight: 600,
+              }}
+            >
+              삭제하기
+            </Button>
+          </Box>
+        </Box>
+      </CustomModal>
     </Box>
   );
 }
