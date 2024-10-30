@@ -101,32 +101,29 @@ export default function FreeBoardData() {
   const [boardId, setBoardId] = useState(""); // 선택된 카테고리 ID 상태
 
   const fetchData = useCallback(async () => {
-    if (
-      currentUser &&
-      currentUser.member &&
-      currentUser.member.memberType === "ROLE_ADMIN"
-    ) {
-      const data = await getAllPosts();
-      const updatedData = data.map((post) => ({
-        ...post,
-        courseTitle: post.courseTitle || "전체",
-      }));
-      setRows(updatedData);
-    } else if (
-      currentUser &&
-      currentUser.member &&
-      (currentUser.member.memberType === "ROLE_STUDENT" ||
-        currentUser.member.memberType === "ROLE_TEACHER")
-    ) {
-      const userCourseId = await getCourseIdForUser();
-      setUserCourseId(userCourseId);
-      const data = await getCourseAllPosts(userCourseId); // courseId에 따라 게시물 가져오기
-      const updatedData = data.map((post) => ({
-        ...post,
-      }));
-      setRows(updatedData);
+    if (currentUser && currentUser.member) {
+      if (currentUser.member.memberType === "ROLE_ADMIN") {
+        const data = await getAllPosts();
+        const updatedData = data.map((post) => ({
+          ...post,
+          courseTitle: post.courseTitle || "전체",
+        }));
+        setRows(updatedData);
+      } else if (
+        currentUser.member.memberType === "ROLE_STUDENT" ||
+        currentUser.member.memberType === "ROLE_TEACHER"
+      ) {
+        const userCourseId = await getCourseIdForUser();
+        setUserCourseId(userCourseId);
+        console.log(userCourseId, "userCourseId");
+        const data = await getCourseAllPosts(userCourseId); // courseId에 따라 게시물 가져오기
+        const updatedData = data.map((post) => ({
+          ...post,
+        }));
+        setRows(updatedData);
+      }
     }
-  }, [currentUser, courseId]);
+  }, [currentUser]);
 
   const fetchBoardTypes = useCallback(async () => {
     try {
@@ -233,13 +230,13 @@ export default function FreeBoardData() {
     title,
     content,
     boardId,
-    courseId,
+    userCourseId,
   };
 
   const postSave = async () => {
     try {
+      console.log(postForm, "postFormzzz");
       await savePost(postForm);
-      console.log(postForm, "=======================================");
       setSuccessMessage("게시물이 성공적으로 저장되었습니다."); // 메시지 설정
       setOpenSuccessSnackbar(true); // Snackbar 열기
       await fetchData(); // 데이터 새로 고침
