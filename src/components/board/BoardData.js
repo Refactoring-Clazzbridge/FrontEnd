@@ -112,7 +112,12 @@ export default function FreeBoardData() {
         courseTitle: post.courseTitle || "전체",
       }));
       setRows(updatedData);
-    } else {
+    } else if (
+      currentUser &&
+      currentUser.member &&
+      (currentUser.member.memberType === "ROLE_STUDENT" ||
+        currentUser.member.memberType === "ROLE_TEACHER")
+    ) {
       const userCourseId = await getCourseIdForUser();
       setUserCourseId(userCourseId);
       const data = await getCourseAllPosts(userCourseId); // courseId에 따라 게시물 가져오기
