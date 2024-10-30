@@ -84,6 +84,11 @@ export default function QuestionBoard() {
     }
   };
 
+  const hasTeacherAlreadyAnswered = useCallback(() => {
+    if (!answers || !userInfo?.member?.id) return false;
+    return answers.some((answer) => answer.teacherId === userInfo.member.id);
+  }, [answers, userInfo?.member?.id]);
+
   // useEffect 추가 - selectedRow 변경 시 권한 재확인
   useEffect(() => {
     if (selectedRow && userInfo?.member) {
@@ -235,19 +240,30 @@ export default function QuestionBoard() {
   const fetchAnswers = useCallback(async (questionId) => {
     try {
       const data = await getAnswersByQuestionIdApi(questionId);
-      console.log("Fetched answers data:", data); // 서버로부터 받아온 데이터를 확인
+      console.log("Fetched answers data:", data);
 
-      // 응답이 문자열일 경우 배열로 변환
-      if (typeof data === "string") {
-        setAnswers([data]); // 문자열을 배열로 감쌈
-      } else if (Array.isArray(data)) {
-        setAnswers(data); // 이미 배열이면 그대로 설정
+      // 응답 데이터 처리
+      if (Array.isArray(data)) {
+        // 새로 등록된 답변은 현재 시간으로 설정
+        const processedAnswers = data.map((answer) => {
+          if (answer.newlyCreated) {
+            // 새로 생성된 답변인 경우
+            return {
+              ...answer,
+              createdAt: new Date().toISOString(), // 현재 시간으로 설정
+            };
+          }
+          return answer;
+        });
+        setAnswers(processedAnswers);
+      } else if (typeof data === "string") {
+        setAnswers([data]);
       } else {
-        setAnswers([]); // 다른 타입의 응답일 경우 빈 배열로 처리
+        setAnswers([]);
       }
     } catch (error) {
       console.error("답변 목록을 불러오는데 실패했습니다:", error);
-      setAnswers([]); // 오류 발생 시 빈 배열로 처리
+      setAnswers([]);
     }
   }, []);
 
@@ -437,59 +453,52 @@ export default function QuestionBoard() {
       showSnackbar("답변 등록 권한이 없습니다.", "error");
       return;
     }
-
+  
     if (!newAnswer.trim()) {
       showSnackbar("답변 내용을 입력하세요.", "warning");
       return;
     }
-
+  
     if (!userInfo?.member?.id) {
-      // userInfo.member.id가 없을 때 경고 메시지
       showSnackbar("사용자 정보가 없습니다. 로그인 해주세요.", "error");
       return;
     }
-
-    console.log("userInfo.member.id (memberId):", userInfo.member.id);
-    console.log("questionId:", selectedRow?.id);
-    console.log("newAnswer:", newAnswer);
-
-    if (!newAnswer.trim()) {
-      showSnackbar("답변 내용을 입력하세요.", "warning");
-      return;
-    }
-
-    if (!selectedRow?.id) {
-      showSnackbar("질문을 선택해주세요.", "error");
-      return;
-    }
-
+  
     try {
+      // 현재 한국 시간을 ISO 문자열로 생성
+      const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+      
       const response = await saveAnswerApi({
         teacherId: userInfo.member.id,
         questionId: selectedRow.id,
         content: newAnswer,
       });
-      console.log("서버 응답:", response);
-
-      // 답변 목록 업데이트
-      const updatedAnswers = await getAnswersByQuestionIdApi(selectedRow.id);
-      setAnswers(updatedAnswers);
-
-      // 질문의 해결 여부도 업데이트
-      if (selectedRow) {
-        setSelectedRow((prev) => ({
-          ...prev,
-          solved: true,
-        }));
-
-        // DataGrid의 행도 업데이트
-        setRows((prevRows) =>
-          prevRows.map((row) =>
-            row.id === selectedRow.id ? { ...row, solved: true } : row
-          )
-        );
-      }
-
+  
+      // 새 답변 객체 생성 (서버 응답의 시간 사용 또는 현재 시간 사용)
+      const newAnswerObj = {
+        ...response,
+        id: response.id,
+        content: newAnswer,
+        teacherId: userInfo.member.id,
+        teacherName: userInfo.member.name,
+        createdAt: response.createdAt || now.toISOString(), // 서버 응답의 시간이 없으면 현재 시간 사용
+      };
+  
+      // 새 답변을 기존 답변 목록 맨 앞에 추가
+      setAnswers((prevAnswers) => [newAnswerObj, ...prevAnswers]);
+  
+      // 질문 해결 상태 업데이트
+      setSelectedRow((prev) => ({
+        ...prev,
+        solved: true,
+      }));
+  
+      setRows((prevRows) =>
+        prevRows.map((row) =>
+          row.id === selectedRow.id ? { ...row, solved: true } : row
+        )
+      );
+  
       showSnackbar("답변이 등록되었습니다.");
       setNewAnswer("");
     } catch (error) {
@@ -634,22 +643,14 @@ export default function QuestionBoard() {
     const userId = userInfo.member.id;
     const questionUserId = question.studentId || question.memberId;
 
-    console.log("=== 권한 체크 상세 정보 ===");
-    console.log("Question userId:", questionUserId);
-    console.log("Current userId:", userId);
-    console.log("Member type:", memberType);
-    console.log("Is same user:", questionUserId === userId);
-    console.log("===================");
-
-    return (
-      memberType === "ROLE_ADMIN" ||
-      (memberType === "ROLE_STUDENT" && questionUserId === userId)
-    );
+    // 관리자는 수정 권한 없음, 학생만 자신의 글 수정 가능
+    return memberType === "ROLE_STUDENT" && questionUserId === userId;
   };
 
   const canManageRecommendation = () => {
     const memberType = userInfo?.member?.memberType;
-    return ["ROLE_ADMIN", "ROLE_TEACHER"].includes(memberType); // 관리자와 강사만 추천 가능
+    // 추천 기능은 교사만 가능하도록 수정
+    return memberType === "ROLE_TEACHER";
   };
 
   const canDeleteQuestion = (question) => {
@@ -665,7 +666,8 @@ export default function QuestionBoard() {
 
   const canManageAnswers = () => {
     const memberType = userInfo?.member?.memberType;
-    return ["ROLE_ADMIN", "ROLE_TEACHER"].includes(memberType); // 관리자와 강사 모두 답변 관리 가능
+    // 답변 작성은 교사만 가능하도록 수정
+    return memberType === "ROLE_TEACHER";
   };
 
   const handleRecommendedClick = async (
@@ -729,13 +731,17 @@ export default function QuestionBoard() {
     const memberType = userInfo?.member?.memberType;
     const userId = userInfo?.member?.id;
 
-    // 강사는 자신의 답변에만 메뉴 표시
-    if (memberType === "ROLE_TEACHER") {
-      return answer.teacherId === userId;
+    // 강사가 자신의 답변인 경우
+    if (memberType === "ROLE_TEACHER" && answer.teacherId === userId) {
+      return true;
     }
 
-    // 관리자는 모든 답변에 메뉴 표시
-    return memberType === "ROLE_ADMIN";
+    // 관리자인 경우
+    if (memberType === "ROLE_ADMIN") {
+      return true;
+    }
+
+    return false;
   };
 
   // 메뉴 아이템 표시 여부 결정하는 함수 추가
@@ -743,14 +749,14 @@ export default function QuestionBoard() {
     const memberType = userInfo?.member?.memberType;
     const userId = userInfo?.member?.id;
 
-    // 강사는 자신의 답변에 모든 메뉴 표시
+    // 강사가 자신의 답변인 경우
     if (memberType === "ROLE_TEACHER" && answer.teacherId === userId) {
       return ["edit", "delete"];
     }
 
-    // 관리자는 본인 답변이면 모든 메뉴, 아니면 삭제만
+    // 관리자는 삭제만
     if (memberType === "ROLE_ADMIN") {
-      return answer.teacherId === userId ? ["edit", "delete"] : ["delete"];
+      return ["delete"];
     }
 
     return [];
@@ -794,6 +800,8 @@ export default function QuestionBoard() {
         showSnackbar("삭제 권한이 없습니다.", "error");
         return;
       }
+
+      // 강사가 이미 답변을 작성했는지 확인하는 함수
 
       // 답변 삭제 실행
       await deleteAnswerApi(deleteTargetId);
@@ -1257,7 +1265,7 @@ export default function QuestionBoard() {
                         variant="outlined"
                         onClick={() => {
                           setIsEditing(false);
-                          setContent(""); // 수정 취소 시 content 초기화
+                          setContent("");
                         }}
                       >
                         취소
@@ -1265,18 +1273,17 @@ export default function QuestionBoard() {
                     </>
                   ) : (
                     <>
-                      {/* 수정 버튼 - 관리자이거나 본인 글인 경우 */}
-                      {(type === "ROLE_ADMIN" ||
-                        (type === "ROLE_STUDENT" &&
-                          selectedRow?.studentId === userInfo?.member?.id)) && (
-                        <Button
-                          variant="outlined"
-                          onClick={() => handleStartEdit(selectedRow.content)} // 수정된 부분
-                        >
-                          수정
-                        </Button>
-                      )}
-                      {/* 삭제 버튼 */}
+                      {/* 수정 버튼 - 본인 글인 학생만 가능 */}
+                      {type === "ROLE_STUDENT" &&
+                        selectedRow?.studentId === userInfo?.member?.id && (
+                          <Button
+                            variant="outlined"
+                            onClick={() => handleStartEdit(selectedRow.content)}
+                          >
+                            수정
+                          </Button>
+                        )}
+                      {/* 삭제 버튼 - 관리자, 교사, 본인인 경우 */}
                       {(type === "ROLE_ADMIN" ||
                         type === "ROLE_TEACHER" ||
                         (type === "ROLE_STUDENT" &&
@@ -1309,45 +1316,57 @@ export default function QuestionBoard() {
                 variant="h6"
                 sx={{ marginBottom: 1, marginTop: "70px", fontStyle: "bold" }}
               >
-                댓글 {answers.length}개
+                답변 {answers.length}개
               </Typography>
-              {(type === "ROLE_ADMIN" || type === "ROLE_TEACHER") && (
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    marginBottom: "40px", // 답변 등록과 리스트 간의 간격 조절
-                    gap: 1,
-                  }}
-                >
-                  <TextField
-                    fullWidth
-                    value={newAnswer}
-                    onChange={(e) => setNewAnswer(e.target.value)}
-                    placeholder="답변을 입력하세요"
-                    multiline
-                    minRows={1}
-                    sx={{
-                      maxWidth: "90%", // 원하는 비율이나 px 값으로 설정 가능
-                      "& .MuiInputBase-root": {
-                        padding: "8px", // 텍스트 박스 내부 패딩
-                      },
-                    }}
-                  />
-                  <Button
-                    variant="contained"
-                    onClick={handleAnswerSubmit}
-                    sx={{
-                      backgroundColor: "#34495e",
-                      height: "auto",
-                      padding: "8px 16px", // TextField와 동일한 padding 설정
-                      display: "flex",
-                      alignItems: "center",
-                    }}
-                  >
-                    등록
-                  </Button>
-                </Box>
+              {type === "ROLE_TEACHER" && ( // 관리자 제외, 교사만 답변 작성 가능
+                <>
+                  {!hasTeacherAlreadyAnswered() ? (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        marginBottom: "40px",
+                        gap: 1,
+                      }}
+                    >
+                      <TextField
+                        fullWidth
+                        value={newAnswer}
+                        onChange={(e) => setNewAnswer(e.target.value)}
+                        placeholder="답변을 입력하세요"
+                        multiline
+                        minRows={1}
+                        sx={{
+                          maxWidth: "90%",
+                          "& .MuiInputBase-root": {
+                            padding: "8px",
+                          },
+                        }}
+                      />
+                      <Button
+                        variant="contained"
+                        onClick={handleAnswerSubmit}
+                        sx={{
+                          backgroundColor: "#34495e",
+                          height: "auto",
+                          padding: "8px 16px",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        등록
+                      </Button>
+                    </Box>
+                  ) : (
+                    <Typography
+                      sx={{
+                        color: "text.secondary",
+                        marginBottom: "20px",
+                        fontSize: "0.875rem",
+                      }}
+                    ></Typography>
+                  )}
+                </>
               )}
 
               {/* 답변 리스트 */}
@@ -1419,14 +1438,21 @@ export default function QuestionBoard() {
                                 color: "gray",
                                 transform: canShowMenu(answer)
                                   ? "translateX(-255px)"
-                                  : "translateX(-584px)", // 더보기 메뉴 유무에 따라 위치 조정
-                                minWidth: "80px", // 상대 시간에 최소 너비를 지정
-                                textAlign: "left", // 오른쪽 정렬
+                                  : "translateX(-584px)",
+                                minWidth: "80px",
+                                textAlign: "left",
                               }}
                             >
                               {formatDistanceToNow(new Date(answer.createdAt), {
                                 addSuffix: true,
                                 locale: ko,
+                                includeSeconds: true,
+                                // 현재 시간을 한국 시간으로 설정
+                                baseDate: new Date(
+                                  new Date().toLocaleString("en-US", {
+                                    timeZone: "Asia/Seoul",
+                                  })
+                                ),
                               })}
                             </Typography>
 

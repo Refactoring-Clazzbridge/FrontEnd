@@ -26,6 +26,7 @@ import {
   getCourseId,
   getTeacherByCourseId,
 } from "../../services/apis/studentCourse/get";
+import socket from '../../utils/socket'
 
 function ProfileCard({
   seatId,
@@ -508,6 +509,17 @@ export default function StudentRoom() {
   const fetchSeatsByCourse = async (courseId) => {
     try {
       const response = await apiClient.get(`/seat/course/${courseId}`);
+      let redis_response;
+      await socket.emit('fetchStudentData', courseId).then(() => {
+        try {
+          redis_response = socket.on('fetchedStudentData', async () => {
+
+          })  
+        } catch (e) {
+          console.error(e);
+        }
+      })
+
       const sortedSeats = response.data.sort(
         (a, b) => a.seatNumber - b.seatNumber
       );

@@ -35,7 +35,8 @@ function LoginForm({ onLoginSuccess }) {
     setLoading(true);
 
     try {
-      console.log("1111=============>");
+      console.log("1111=============>test");
+      console.log(memberId, password);
       const response = await axios.post("http://localhost:8080/api/login", {
         memberId,
         password,
