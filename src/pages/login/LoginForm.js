@@ -36,7 +36,7 @@ function LoginForm({ onLoginSuccess }) {
 
     try {
       console.log("1111=============>");
-      const response = await axios.post("http://default-back-service-e27ef-100126159-b0eb9aec7a73.kr.lb.naverncp.com:8080/api/login", {
+      const response = await axios.post("http://localhost:8080/api/login", {
         memberId,
         password,
       });

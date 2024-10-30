@@ -23,7 +23,7 @@ const Vote = () => {
     const [courseOption, setCourseOption] = useState('');
     //const [courseCheck, setCourseCheck] = useState('');
 
-    const [openModalVoteInfo, setOpenModalVoteInfo] = useState(false); // Drawer 열기/닫기 상태
+    const [openModalVoteInfo, setOpenModalVoteInfo] = useState(false); // Modal 열기/닫기 상태
     const [selectedVote, setSelectedVote] = useState(null); // 선택된 투표
     const [voteInfo, setVoteInfo] = useState(null); // Fetch된 투표 상세 정보 상태 관리
     const [selectedOption, setSelectedOption] = useState(null); // 첫 번째 옵션의 ID로 초기화
@@ -37,6 +37,7 @@ const Vote = () => {
         setOpenSnackbar(false); // 스낵바 닫기
     };
     const role = localStorage.getItem('membertype');
+    const [hasVoted, setHasVoted] = useState(false);
 
     const renderButtons = () => {
         if (role === 'ROLE_TEACHER') {
@@ -84,16 +85,6 @@ const Vote = () => {
             });
     };
 
-    //const fetchCourseCheck = (id) => {
-    //    apiClient.get(`user/check/${id}`)
-    //        .then(response => {
-    //            setCourseCheck(response.data); // 강의명 체크
-    //        })
-    //        .catch(error => {
-    //            console.error('강의명 체크를 못했습니다.', error);
-    //        });
-    //};
-
     const fetchCourse = () => {
         // 강의명 목록을 가져오는 API 호출
         apiClient.get('course/title')
@@ -113,13 +104,6 @@ const Vote = () => {
 
     // 투표 제출
     const handleVoteSubmit = () => {
-        if (!selectedVote.isExpired) {
-            setSnackbarMessage('투표 기간이 만료된 투표입니다.');
-            setSnackbarSeverity('error');
-            setOpenSnackbar(true);
-            return; // 함수 종료
-        }
-
         if (selectedOption) {
             // 서버로 선택된 옵션을 전송
             apiClient.put(`vote/${selectedVote.id}/submit`, {
@@ -130,12 +114,12 @@ const Vote = () => {
                     setSnackbarMessage('투표가 성공적으로 제출되었습니다.');
                     setSnackbarSeverity('success');
                     setOpenSnackbar(true);
-                    setOpenModalVoteInfo(false); // Drawer 닫기
+                    setOpenModalVoteInfo(false);
+                    console.log(selectedOption.voteId);
                 })
                 .catch(error => {
                     console.error('투표 제출 실패:', error);
-                    console.log(selectedOption);
-                    setSnackbarMessage('투표 제출에 실패했습니다.');
+                    setSnackbarMessage(error.response.data);
                     setSnackbarSeverity('error');
                     setOpenSnackbar(true);
                 });
@@ -150,27 +134,6 @@ const Vote = () => {
         apiClient.get(`vote/detail/${id}`)
             .then(response => {
                 console.log('API Response:', response.data);
-
-                const voteOptions = response.data.voteOptionInfoList;
-
-                // rank 값을 업데이트하는 함수
-                const updateRanks = (options) => {
-                    const sortedOptions = options
-                        .slice() // 원본 배열을 변경하지 않기 위해 복사
-                        .sort((a, b) => Number(b.votes) - Number(a.votes));
-
-                    // 새로운 rank 값을 할당
-                    sortedOptions.forEach((option, index) => {
-                        option.rank = index + 1; // 1부터 시작하는 순위
-                    });
-
-                    return sortedOptions;
-                };
-
-                // rank 값을 업데이트하고 상태에 반영
-                response.data.voteOptionInfoList = updateRanks(voteOptions);
-
-
                 setVoteInfo(response.data);
                 setSelectedOption('');
 
@@ -178,6 +141,23 @@ const Vote = () => {
             .catch(error => {
                 console.error('투표 상세 정보를 불러오지 못했습니다.', error);
             });
+    };
+
+    // 투표 버튼 렌더링
+    const renderVoteButton = () => {
+        if (hasVoted) {
+            return (
+                <Button variant="outlined" disabled>
+                    이미 투표함
+                </Button>
+            );
+        } else {
+            return (
+                <Button variant="outlined" onClick={handleVoteSubmit} style={{ marginTop: '6px', marginRight: '8px' }}>
+                    투표하기
+                </Button>
+            );
+        }
     };
 
 
@@ -443,10 +423,10 @@ const Vote = () => {
                                 </Typography>
                                 {voteInfo.voteOptionInfoList && voteInfo.voteOptionInfoList.length > 0 ? (
                                     <RadioGroup
-                                        value={selectedOption || ''} // 상태가 undefined일 경우를 대비하여 빈 문자열로 설정
+                                        value={selectedOption || ''} // 선택된 option의 voteOptionId를 설정
                                         onChange={(e) => {
-                                            const selectedValue = Number(e.target.value); // 여기서 target을 사용해보세요
-                                            console.log("선택된 값:", Number(e.target.value)); // 선택된 값 확인
+                                            const selectedValue = Number(e.target.value); // 선택된 value (voteOptionId)를 가져옴
+                                            console.log("선택된 값:", selectedValue); // 선택된 값 확인
 
                                             setSelectedOption(selectedValue); // 상태 업데이트
                                         }}
@@ -454,7 +434,7 @@ const Vote = () => {
                                         {voteInfo.voteOptionInfoList.map((option) => (
                                             <FormControlLabel
                                                 key={option.rank} // 고유한 키
-                                                value={option.rank} // 라디오 버튼의 value를 ID로 설정
+                                                value={option.rank}
                                                 control={<Radio disabled={role === 'ROLE_ADMIN' || role === 'ROLE_TEACHER'} />} // ROLE_ADMIN의 경우 비활성화
                                                 label={`${option.optionText} (현재 점유율: ${option.occupancyRate}, 투표 수: ${option.votes})`}
                                             />
@@ -465,7 +445,7 @@ const Vote = () => {
                                     <Typography variant="body1">옵션이 없습니다.</Typography> // 옵션이 없을 때 메시지
                                 )}
                                 {/* 투표 버튼은 ROLE_ADMIN의 경우 표시하지 않음 */}
-                                {role !== ('ROLE_ADMIN' && 'ROLE_TEACHER') && (
+                                {role !== ('ROLE_ADMIN' || 'ROLE_TEACHER') && (
                                     <Button variant="outlined" onClick={handleVoteSubmit} style={{ marginTop: '6px', marginRight: '8px' }}>
                                         투표하기
                                     </Button>
