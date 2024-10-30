@@ -76,9 +76,6 @@ export default function QuestionBoard() {
 
       setSelectedRow(processedRow);
       setOpenDrawer(true);
-
-      console.log("Processed clicked row:", processedRow);
-      console.log("Current user info:", userInfo?.member);
     } catch (error) {
       console.error("Error processing row click:", error);
     }
@@ -92,14 +89,6 @@ export default function QuestionBoard() {
   // useEffect 추가 - selectedRow 변경 시 권한 재확인
   useEffect(() => {
     if (selectedRow && userInfo?.member) {
-      console.log("=== 권한 체크 데이터 ===");
-      console.log("Selected Row:", selectedRow);
-      console.log("User Info:", userInfo.member);
-      console.log(
-        "Is Same User:",
-        selectedRow.studentId === userInfo.member.id
-      );
-      console.log("========================");
     }
   }, [selectedRow, userInfo]);
 
@@ -199,7 +188,6 @@ export default function QuestionBoard() {
   const fetchQuestions = useCallback(async () => {
     // 관리자가 아닌 경우에만 courseId 체크
     if (type !== "ROLE_ADMIN" && !courseId) {
-      console.log("Course ID가 설정되지 않았습니다:", courseId);
       return;
     }
 
@@ -207,17 +195,11 @@ export default function QuestionBoard() {
       let data;
       if (type === "ROLE_ADMIN") {
         data = await getAllQuestions();
-        console.log("data의 값:", data);
       } else {
-        console.log("질문을 가져오는 중... courseId:", courseId);
         data = await getQuestionsByCourseId(courseId);
-        console.log("data의 값:", data);
       }
 
-      console.log("Fetched Questions:", data);
       if (data && data.length > 0) {
-        console.log("First row sample:", data[0]);
-        console.log("createdAt value:", data[0].createdAt);
       }
 
       const processedData = data.map((item) => ({
@@ -229,7 +211,6 @@ export default function QuestionBoard() {
         createdAt: item.createdAt, // 명시적으로 createdAt 매핑
       }));
 
-      console.log("Processed data:", processedData);
       setRows(processedData);
     } catch (error) {
       console.error("질문 목록을 불러오는데 실패했습니다:", error);
@@ -237,35 +218,41 @@ export default function QuestionBoard() {
     }
   }, [courseId, type]);
 
-  const fetchAnswers = useCallback(async (questionId) => {
-    try {
-      const data = await getAnswersByQuestionIdApi(questionId);
-      console.log("Fetched answers data:", data);
+  const fetchAnswers = useCallback(
+    async (questionId) => {
+      try {
+        const data = await getAnswersByQuestionIdApi(questionId);
 
-      // 응답 데이터 처리
-      if (Array.isArray(data)) {
-        // 새로 등록된 답변은 현재 시간으로 설정
-        const processedAnswers = data.map((answer) => {
-          if (answer.newlyCreated) {
-            // 새로 생성된 답변인 경우
-            return {
-              ...answer,
-              createdAt: new Date().toISOString(), // 현재 시간으로 설정
-            };
-          }
-          return answer;
-        });
-        setAnswers(processedAnswers);
-      } else if (typeof data === "string") {
-        setAnswers([data]);
-      } else {
+        if (Array.isArray(data)) {
+          const processedAnswers = data.map((serverAnswer) => {
+            // 로컬에 저장된 답변 찾기
+            const existingAnswer = answers.find(
+              (a) => a.id === serverAnswer.id && a.questionId === questionId
+            );
+
+            // 새로 작성된 답변이면 기존 시간 유지
+            if (existingAnswer?.isNewAnswer) {
+              return {
+                ...serverAnswer,
+                createdAt: existingAnswer.createdAt,
+                isNewAnswer: true,
+              };
+            }
+
+            return serverAnswer;
+          });
+
+          setAnswers(processedAnswers);
+        } else {
+          setAnswers([]);
+        }
+      } catch (error) {
+        console.error("답변 목록을 불러오는데 실패했습니다:", error);
         setAnswers([]);
       }
-    } catch (error) {
-      console.error("답변 목록을 불러오는데 실패했습니다:", error);
-      setAnswers([]);
-    }
-  }, []);
+    },
+    [answers]
+  );
 
   useEffect(() => {
     fetchQuestions();
@@ -273,38 +260,35 @@ export default function QuestionBoard() {
 
   useEffect(() => {
     if (selectedRow?.id) {
-      fetchAnswers(selectedRow.id);
+      // 처음 drawer가 열릴 때만 답변 목록을 가져옴
+      const isInitialFetch = !answers.some(
+        (answer) => answer.questionId === selectedRow.id
+      );
+
+      if (isInitialFetch) {
+        fetchAnswers(selectedRow.id);
+      }
     }
-  }, [selectedRow, fetchAnswers]);
+  }, [selectedRow?.id]); // answers와 fetchAnswers 의존성 제거
 
-  useEffect(() => {
-    console.log("Fetched answers:", answers); // answers 배열이 업데이트될 때마다 출력
-  }, [answers]); // answers가 변경될 때마다 실행
-
-  useEffect(() => {
-    console.log("User Info:", userInfo);
-  }, [userInfo]);
+  useEffect(() => {}, [userInfo]);
 
   useEffect(() => {
     const fetchCourseId = async () => {
       try {
-        console.log("전체 userInfo:", userInfo);
         const memberType = userInfo?.member?.memberType;
         setType(memberType);
 
         if (!memberType) {
-          console.log("memberType이 아직 설정되지 않음");
           return;
         }
 
-        // 관리자인 경우 모든 질문을 가져옴
         if (memberType === "ROLE_ADMIN") {
           const allQuestions = await getAllQuestions();
           setRows(allQuestions);
           return;
         }
 
-        // 교사/학생인 경우 기존 로직 유지
         let fetchedCourseId;
         if (memberType === "ROLE_TEACHER") {
           fetchedCourseId = await getTeacherCourseId();
@@ -312,10 +296,8 @@ export default function QuestionBoard() {
           fetchedCourseId = await getStudentCourseId();
         }
 
-        console.log("가져온 courseId:", fetchedCourseId);
         if (fetchedCourseId) {
           setCourseId(fetchedCourseId);
-          console.log("설정된 courseId:", fetchedCourseId);
         }
       } catch (error) {
         console.error(
@@ -408,14 +390,6 @@ export default function QuestionBoard() {
       const question = rows.find((row) => row.id === id);
       if (!question) return false;
 
-      console.log("=== 삭제 권한 체크 상세 정보 ===");
-      console.log("Question:", question);
-      console.log("User type:", type);
-      console.log("User ID:", userInfo?.member?.id);
-      console.log("Question studentId:", question.studentId);
-      console.log("Is same user:", question.studentId === userInfo?.member?.id);
-      console.log("===================");
-
       return (
         type === "ROLE_ADMIN" ||
         type === "ROLE_TEACHER" ||
@@ -471,7 +445,6 @@ export default function QuestionBoard() {
         content: newAnswer,
       });
 
-      // 새 답변 객체 생성
       const newAnswerObj = {
         ...response,
         id: response.id,
@@ -479,16 +452,12 @@ export default function QuestionBoard() {
         teacherId: userInfo.member.id,
         teacherName: userInfo.member.name,
         createdAt: new Date().toISOString(),
+        isNewAnswer: true, // 이 플래그 추가
+        questionId: selectedRow.id, // 질문 ID도 추가
       };
 
-      // 직접 answers 상태 업데이트, fetchAnswers 호출하지 않음
       setAnswers((prevAnswers) => [newAnswerObj, ...prevAnswers]);
-
-      setSelectedRow((prev) => ({
-        ...prev,
-        solved: true,
-      }));
-
+      setSelectedRow((prev) => ({ ...prev, solved: true }));
       setRows((prevRows) =>
         prevRows.map((row) =>
           row.id === selectedRow.id ? { ...row, solved: true } : row
@@ -539,11 +508,6 @@ export default function QuestionBoard() {
     const memberType = userInfo?.member?.memberType;
     const userId = userInfo?.member?.id;
 
-    console.log("Checking delete permission:");
-    console.log("User type:", memberType);
-    console.log("User ID:", userId);
-    console.log("Answer:", answer);
-
     // 관리자는 모든 답변 삭제 가능
     if (memberType === "ROLE_ADMIN") {
       return true;
@@ -560,7 +524,6 @@ export default function QuestionBoard() {
   // handleAnswerDelete 함수 내 권한 체크 코드 수정
   const handleAnswerDelete = async (answerId) => {
     try {
-      console.log("Attempting to delete answer with ID:", answerId);
       const answer = answers.find((a) => a.id === answerId);
 
       if (!answer) {
@@ -571,12 +534,12 @@ export default function QuestionBoard() {
 
       // 권한 체크
       const hasPermission = canDeleteAnswer(answer);
-      console.log("Delete permission check:", {
-        hasPermission,
-        memberType: userInfo?.member?.memberType,
-        userId: userInfo?.member?.id,
-        teacherId: answer.teacherId,
-      });
+      // console.log("Delete permission check:", {
+      //   hasPermission,
+      //   memberType: userInfo?.member?.memberType,
+      //   userId: userInfo?.member?.id,
+      //   teacherId: answer.teacherId,
+      // });
 
       if (!hasPermission) {
         showSnackbar("삭제 권한이 없습니다.", "error");
@@ -671,9 +634,6 @@ export default function QuestionBoard() {
     currentRecommendedStatus
   ) => {
     try {
-      console.log("현재 추천 상태:", currentRecommendedStatus);
-      console.log("전환될 추천 상태:", !currentRecommendedStatus);
-
       // 새로운 추천 상태를 미리 계산
       const newRecommendedStatus = !currentRecommendedStatus;
 
@@ -681,7 +641,6 @@ export default function QuestionBoard() {
         questionId,
         currentRecommendedStatus
       );
-      console.log("서버 응답:", updatedQuestion);
 
       if (
         updatedQuestion &&
@@ -781,7 +740,6 @@ export default function QuestionBoard() {
 
   const handleConfirmDelete = async () => {
     try {
-      console.log("Confirming delete for answerId:", deleteTargetId);
       const answer = answers.find((a) => a.id === deleteTargetId);
 
       if (!answer) {
@@ -1035,11 +993,18 @@ export default function QuestionBoard() {
           onRowClick={handleRowClick}
           onRowSelectionModelChange={setSelectedIds}
           getRowId={(row) => row.id}
-          sortingMode="server"
           initialState={{
-            pagination: { paginationModel: { pageSize: 5 } },
+            pagination: {
+              paginationModel: {
+                pageSize: 10,
+              },
+            },
+            sorting: {
+              sortModel: [{ field: "createdAt", sort: "desc" }],
+            },
           }}
-          pageSizeOptions={[5]}
+          pageSizeOptions={[10, 20, 30]}
+          sortingOrder={["desc", "asc"]}
           localeText={{
             // 메뉴 관련
             columnMenuLabel: "메뉴",
@@ -1312,7 +1277,7 @@ export default function QuestionBoard() {
 
               <Typography
                 variant="h6"
-                sx={{ marginBottom: 1, marginTop: "70px", fontStyle: "bold" }}
+                sx={{ marginBottom: 1, marginTop: "30px", fontStyle: "bold" }}
               >
                 답변 {answers.length}개
               </Typography>
@@ -1375,7 +1340,6 @@ export default function QuestionBoard() {
                 }}
               >
                 {answers.map((answer, index) => {
-                  console.log("Answer object:", answer); // answer 객체 확인
                   return (
                     <Box
                       key={answer.id || index} // answer.id가 없으면 index를 사용
@@ -1441,7 +1405,7 @@ export default function QuestionBoard() {
                                 textAlign: "left",
                               }}
                             >
-                              {/* {formatDistanceToNow(new Date(answer.createdAt), {
+                              {formatDistanceToNow(new Date(answer.createdAt), {
                                 addSuffix: true,
                                 locale: ko,
                                 includeSeconds: true,
@@ -1451,7 +1415,7 @@ export default function QuestionBoard() {
                                     timeZone: "Asia/Seoul",
                                   })
                                 ),
-                              })} */}
+                              })}
                             </Typography>
 
                             {canShowMenu(answer) && (
@@ -1488,10 +1452,6 @@ export default function QuestionBoard() {
                                   {getMenuItems(answer).includes("delete") && (
                                     <MenuItem
                                       onClick={() => {
-                                        console.log(
-                                          "Delete MenuItem clicked - answerId:",
-                                          answer.id
-                                        );
                                         handleMenuDelete(answer.id);
                                       }}
                                     >
