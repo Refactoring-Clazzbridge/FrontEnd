@@ -184,8 +184,12 @@ const TopBar = ({ open }) => {
     // 기존 로그아웃 프로세스 진행
     localStorage.removeItem("token");
     localStorage.removeItem("userInfo");
+    localStorage.removeItem("membertype");
+    localStorage.removeItem("userId");
     Cookies.remove("refreshToken");
+    localStorage.removeItem("seatInfo");
     console.log("토큰 제거 완료", localStorage.getItem("token"));
+
 
     // 페이지를 새로 고치거나 로그인 화면으로 이동
     window.location.reload();
