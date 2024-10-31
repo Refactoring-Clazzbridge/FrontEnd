@@ -1,7 +1,7 @@
 import axios from "../../../shared/apiClient";
 
 export const savePost = async (data) => {
-  const { title, content, boardId: boardTypeId, userCourseId: courseId } = data;
+  const { title, content, boardId: boardTypeId, courseId } = data;
   const savedPost = {
     title,
     content,
