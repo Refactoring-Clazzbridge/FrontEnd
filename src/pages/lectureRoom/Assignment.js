@@ -191,6 +191,7 @@ export default function AssignmentAccordion() {
         currentUser={currentUser}
         courseId={courseId}
         studentCourseId={studentCourseId}
+        fetchAssignments={fetchAssignments}
         assignments={assignments} // assignments props 전달
       />
 

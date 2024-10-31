@@ -184,8 +184,12 @@ const TopBar = ({ open }) => {
     // 기존 로그아웃 프로세스 진행
     localStorage.removeItem("token");
     localStorage.removeItem("userInfo");
+    localStorage.removeItem("membertype");
+    localStorage.removeItem("userId");
     Cookies.remove("refreshToken");
+    localStorage.removeItem("seatInfo");
     console.log("토큰 제거 완료", localStorage.getItem("token"));
+
 
     // 페이지를 새로 고치거나 로그인 화면으로 이동
     window.location.reload();
@@ -321,9 +325,8 @@ const TopBar = ({ open }) => {
               </CustomIconButton>
             </LightTooltip>
 
-            {/* 채팅 */}
             <LightTooltip title="채팅">
-              <CustomIconButton>
+              <CustomIconButton onClick={handleNotificationClick}>
                 <CustomBadge badgeContent={4} color="error" max={9}>
                   <ForumOutlinedIcon fontSize="small" />
                 </CustomBadge>
@@ -371,7 +374,7 @@ const TopBar = ({ open }) => {
       <Dialog open={isNotificationOpen} onClose={handleNotificationClose}>
         <DialogTitle>알림</DialogTitle>
         <DialogContent>
-          <DialogContentText>여기에 알림 내용을 표시합니다.</DialogContentText>
+          <DialogContentText>업데이트 예정입니다.</DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleNotificationClose}>닫기</Button>

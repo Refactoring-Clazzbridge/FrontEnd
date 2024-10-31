@@ -99,6 +99,8 @@ export default function QuestionBoard() {
       flex: 0.5,
       resizable: false,
       sortable: true,
+      headerAlign: "left", // 헤더 정렬 추가
+      align: "left", // 데이터 정렬 추가
     },
     {
       field: "content",
@@ -1003,7 +1005,6 @@ export default function QuestionBoard() {
               sortModel: [{ field: "createdAt", sort: "desc" }],
             },
           }}
-          pageSizeOptions={[10, 20, 30]}
           sortingOrder={["desc", "asc"]}
           localeText={{
             // 메뉴 관련
@@ -1063,13 +1064,26 @@ export default function QuestionBoard() {
             "--DataGrid-rowBorderColor": "transparent",
             "& .MuiDataGrid-cell": {
               border: "none",
+              paddingLeft: "18px", // 체크박스와 셀 데이터 간격 조정
             },
             "& .MuiDataGrid-row": {
               borderBottom: "1px solid #f6f8fa",
+              paddingLeft: "1px", // 체크박스와 헤더 간격 조정
+            },
+
+            "& .MuiDataGrid-cellCheckbox": {
+              // 체크박스 셀만 특정
+              paddingLeft: "8px", // 체크박스 셀의 왼쪽 패딩을 0으로 설정
             },
             "& .MuiDataGrid-columnHeaders": {
               borderBottom: "1px solid #f6f8fa",
+              paddingLeft: "2px", // 체크박스와 헤더 간격 조정
             },
+            "& .MuiDataGrid-columnHeaderCheckbox": {
+              // 헤더의 체크박스도 동일하게 조정
+              paddingLeft: "0px",
+            },
+
             "& .MuiDataGrid-footerContainer": {
               border: "none",
             },

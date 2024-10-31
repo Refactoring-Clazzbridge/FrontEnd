@@ -258,15 +258,6 @@ export default function NoticeBoard() {
           marginBottom: 2,
         }}
       >
-        <Tooltip title="작성하기">
-          <Button
-            variant="outlined"
-            sx={{ width: "38px", height: "38px" }}
-            onClick={openModal}
-          >
-            <PostAddIcon /> {/* 아이콘만 표시 */}
-          </Button>
-        </Tooltip>
         {currentUser?.member?.memberType === "ROLE_ADMIN" && (
           <Tooltip title="삭제하기">
             <Button

@@ -10,6 +10,7 @@ import HomeImage from "../../assets/images/homeImage6.jpeg";
 import backImage from "../../assets/images/photo_01_satur_-60.jpg";
 import logo from "../../assets/images/logo.png";
 import socket from "../../utils/socket";
+import apiClient from "../../shared/apiClient";
 
 function Login() {
   const [isLoading, setIsLoading] = useState(true);
@@ -17,6 +18,7 @@ function Login() {
     !!localStorage.getItem("token")
   );
   const navigate = useNavigate();
+
 
   useEffect(() => {
     console.log("isLoggedIn 상태 변경:", isLoggedIn);
@@ -58,12 +60,13 @@ function Login() {
           }
         } catch (error) {
           console.error("Refresh token failed:", error);
-
+          handleLoginFail();
           console.log("1=======> 로그인 페이지로");
           navigate("/"); // 로그인 페이지로 리다이렉트
         }
       } else {
         console.log("2=======> 로그인 페이지로");
+        handleLoginFail();
         navigate("/"); // 로그인 페이지로 리다이렉트
       }
     };
@@ -100,6 +103,28 @@ function Login() {
       console.log('Token updated');
       socket.emit('token', localStorage.getItem("token"));
     }
+  };
+  const handleLoginFail = async () => {
+    console.log("로그인 실패");
+    // 좌석 상태를 오프라인으로 업데이트하는 요청 보내기
+    try {
+      const id = localStorage.getItem("userId");
+      const memberId = id.toString();
+      console.log(memberId);
+      console.log("memberId===>", memberId);
+      await apiClient.post("/logout", { memberId });
+      console.log("좌석 상태를 오프라인으로 업데이트 완료");
+    } catch (error) {
+      console.error("좌석 상태 업데이트 중 오류 발생:", error);
+    }
+    setIsLoggedIn(false);
+    localStorage.removeItem("token");
+    localStorage.removeItem("membertype");
+    localStorage.removeItem("userInfo");
+    localStorage.removeItem("seatInfo");
+    localStorage.removeItem("userId");
+    Cookies.remove("refreshToken");
+    navigate("/"); // 로그인 페이지로 리다이렉트
   };
 
   if (isLoading) {

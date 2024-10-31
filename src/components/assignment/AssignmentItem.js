@@ -16,6 +16,8 @@ import CustomSnackbar from "../common/CustomSnackbar";
 import { Box, List, ListItem } from "@mui/material";
 import ReactQuill from "react-quill";
 import hljs from "highlight.js";
+import { deleteAssignment } from "../../services/apis/assignment/delete";
+import CustomModal from "../../components/common/CustomModal";
 import "react-quill/dist/quill.snow.css";
 import "highlight.js/styles/github.css";
 import "../../styles/assignment.css";
@@ -41,6 +43,7 @@ export default function AssignmentItem({
   currentUser,
   courseId,
   studentCourseId,
+  fetchAssignments,
   assignments, // assignments의 기본값을 빈 배열로 설정
 }) {
   const [submissions, setSubmissions] = useState([]); // 초기값은 빈 배열
@@ -48,6 +51,29 @@ export default function AssignmentItem({
   const [students, setStudents] = useState([]); // 수강생 리스트 상태
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [assignmentToDelete, setAssignmentToDelete] = useState(null); // 삭제할 과제 ID 저장
+  const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false); // 강사용 제출 내용 확인 모달
+  const [submissionStudent, setSubmissionStudent] = useState(""); // 제출 내용 저장
+
+  const openDeleteModal = (assignmentId) => {
+    setAssignmentToDelete(assignmentId);
+    setIsDeleteModalOpen(true);
+  };
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setAssignmentToDelete(null);
+  };
+
+  const openSubmissionModal = (student) => {
+    setSubmissionStudent(student);
+    setIsSubmissionModalOpen(true);
+  };
+
+  const closeSubmissionModal = () => {
+    setIsSubmissionModalOpen(false);
+    setSubmissionStudent(null);
+  };
 
   useEffect(() => {
     const fetchSubmissions = async () => {
@@ -102,6 +128,7 @@ export default function AssignmentItem({
               const response = await getStudentsByCourseId(
                 assignment.assignmentId
               );
+              console.log(response, "response");
               return {
                 assignmentId: assignment.assignmentId,
                 students: response,
@@ -154,6 +181,22 @@ export default function AssignmentItem({
       } catch (error) {
         console.error("과제 제출 중 오류 발생", error);
         showSnackbar("과제 제출이 실패했습니다.", "error");
+      }
+    }
+  };
+
+  const handleDelete = async () => {
+    if (assignmentToDelete) {
+      try {
+        await deleteAssignment(assignmentToDelete); // API 호출로 삭제
+        showSnackbar("과제가 삭제되었습니다.", "success");
+        closeDeleteModal(); // 모달 닫기
+        setAssignmentToDelete(null);
+        await fetchAssignments();
+      } catch (error) {
+        console.error("과제 삭제 중 오류 발생", error);
+        showSnackbar("과제 삭제에 실패했습니다.", "error");
+        setAssignmentToDelete(null);
       }
     }
   };
@@ -336,9 +379,22 @@ export default function AssignmentItem({
                   currentUser.member.memberType === "ROLE_TEACHER" && (
                     <Box sx={{ borderTop: "1px solid #e0e0e0" }}>
                       <Typography
-                        sx={{ fontSize: "12px", marginTop: 1, marginBottom: 1 }}
+                        sx={{
+                          fontSize: "12px",
+                          marginTop: 1,
+                          marginBottom: "2px",
+                        }}
                       >
                         총 수강생 수: {assignmentStudents.length}명
+                      </Typography>
+                      <Typography
+                        sx={{
+                          fontSize: "12px",
+                          color: "gray",
+                          marginBottom: 1,
+                        }}
+                      >
+                        수강생 이름을 클릭해 제출 내용을 확인해보세요!
                       </Typography>
 
                       <Box
@@ -395,7 +451,15 @@ export default function AssignmentItem({
                                         marginRight: 8,
                                       }}
                                     />
-                                    <Typography sx={{ fontWeight: 600 }}>
+                                    <Typography
+                                      onClick={() =>
+                                        openSubmissionModal(student)
+                                      }
+                                      sx={{
+                                        fontWeight: 600,
+                                        cursor: "pointer",
+                                      }}
+                                    >
                                       {student.name}
                                     </Typography>
                                   </Box>
@@ -461,6 +525,17 @@ export default function AssignmentItem({
                           </List>
                         </Box>
                       </Box>
+                      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                        <Button
+                          onClick={() =>
+                            openDeleteModal(assignment.assignmentId)
+                          }
+                          variant="outlined"
+                          color="error"
+                        >
+                          삭제
+                        </Button>
+                      </Box>
                     </Box>
                   )}
               </AccordionDetails>
@@ -476,6 +551,120 @@ export default function AssignmentItem({
         severity={snackbarSeverity}
         onClose={handleCloseSnackbar}
       />
+
+      <CustomModal isOpen={isDeleteModalOpen} closeModal={closeDeleteModal}>
+        <Box
+          sx={{
+            display: "flex",
+            margin: "auto",
+            width: "100%",
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "column",
+            gap: "10px",
+          }}
+        >
+          <h3>과제 삭제하기</h3>
+          <p>해당 과제를 삭제하시겠습니까?</p>
+
+          <Box
+            sx={{
+              display: "flex",
+              width: "100%",
+              alignItems: "center",
+              justifyContent: "center",
+              flexDirection: "row",
+              gap: "24px",
+              margin: "16px 0",
+            }}
+          >
+            <Button
+              variant="outlined"
+              onClick={closeDeleteModal}
+              sx={{
+                width: "120px",
+                height: "40px",
+                borderColor: "#34495e",
+                color: "#34495e",
+              }}
+            >
+              취소
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => {
+                handleDelete(assignmentToDelete);
+              }}
+              sx={{
+                width: "120px",
+                height: "40px",
+                backgroundColor: "#34495e",
+                fontWeight: 600,
+              }}
+            >
+              삭제하기
+            </Button>
+          </Box>
+        </Box>
+      </CustomModal>
+
+      <CustomModal
+        isOpen={isSubmissionModalOpen}
+        closeModal={closeSubmissionModal}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            margin: "auto",
+            width: "100%",
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "column",
+            gap: "10px",
+          }}
+        >
+          <h3>
+            {submissionStudent ? submissionStudent.name : ""}님의 제출 내용
+          </h3>
+          <Box
+            sx={{
+              width: "100%",
+              border: "1px solid #e0e0e0",
+              borderRadius: 1,
+              padding: 2,
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            <Typography
+              dangerouslySetInnerHTML={{
+                __html: sanitizer(
+                  `${submissionStudent ? submissionStudent.content : ""}`
+                ),
+              }}
+            ></Typography>
+          </Box>
+          <Box
+            sx={{ width: "100%", display: "flex", justifyContent: "flex-end" }}
+          >
+            <Typography sx={{ fontSize: "12px", color: "gray" }}>
+              제출 날짜:{" "}
+              {submissionStudent ? submissionStudent.submissionDate : ""}
+            </Typography>
+          </Box>
+          <Button
+            variant="outlined"
+            onClick={closeSubmissionModal}
+            sx={{
+              width: "120px",
+              height: "40px",
+              borderColor: "#34495e",
+              color: "#34495e",
+            }}
+          >
+            닫기
+          </Button>
+        </Box>
+      </CustomModal>
     </Box>
   );
 }
