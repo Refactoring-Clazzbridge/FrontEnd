@@ -400,15 +400,18 @@ const Vote = () => {
 
                 <Modal open={openModalVoteInfo} onClose={() => setOpenModalVoteInfo(false)}>
                     <Box sx={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        width: 400,
-                        bgcolor: 'background.paper',
-                        p: 4,
-                        borderRadius: '4px',
-                        boxShadow: 24,
+                        position: "absolute",
+                        borderRadius: "8px",
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%)",
+                        width: 600,
+                        minHeight: 200,
+                        maxWidth: "100%",
+                        maxHeight: "90%",
+                        overflowY: "auto",
+                        padding: "26px",
+                        backgroundColor: 'white',
                     }}>
                         {voteInfo ? (
                             <>
@@ -445,7 +448,7 @@ const Vote = () => {
                                     <Typography variant="body1">옵션이 없습니다.</Typography> // 옵션이 없을 때 메시지
                                 )}
                                 {/* 투표 버튼은 ROLE_ADMIN의 경우 표시하지 않음 */}
-                                {role !== ('ROLE_ADMIN' || 'ROLE_TEACHER') && (
+                                {role === "ROLE_STUDENT" && (
                                     <Button variant="outlined" onClick={handleVoteSubmit} style={{ marginTop: '6px', marginRight: '8px' }}>
                                         투표하기
                                     </Button>

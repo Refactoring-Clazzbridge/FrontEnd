@@ -29,7 +29,7 @@ const ChatsPane = ({ chats, setSelectedChat, selectedChatId }) => {
     return () => {
       socket.off('fetchedChatUserData');
     };
-  }, []);
+  }, [socket]);
 
   const [open, setOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState('');
@@ -38,12 +38,14 @@ const ChatsPane = ({ chats, setSelectedChat, selectedChatId }) => {
   const modalOpen = () => {
     console.log("모달 열기 함수 호출됨");
     setSelectedUser('');
+    setText('');
     setOpen(true);
     console.log("Last모달 열기 함수 호출됨");
   };
 
   const modalClose = () => {
     setOpen(false);
+    setText('');
     setSelectedUser('');
   };
 

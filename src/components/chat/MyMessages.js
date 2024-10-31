@@ -25,7 +25,7 @@ export default function MyProfile() {
       console.error(errorMessage);
     });
 
-  }, []);
+  }, [socket]);
 
 
   return (
