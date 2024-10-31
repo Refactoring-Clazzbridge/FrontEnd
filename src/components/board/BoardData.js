@@ -243,12 +243,16 @@ export default function FreeBoardData() {
   const handleContentChange = (event) => {
     setContent(event.target.value);
   };
+  const isAdmin =
+    currentUser &&
+    currentUser.member &&
+    currentUser.member.memberType === "ROLE_ADMIN";
 
   const postForm = {
     title,
     content,
     boardId,
-    userCourseId,
+    courseId: isAdmin ? courseId : userCourseId,
   };
 
   const postSave = async () => {
@@ -329,11 +333,6 @@ export default function FreeBoardData() {
       handleCloseDrawer(); // Drawer 닫기 함수 호출
     }
   };
-
-  const isAdmin =
-    currentUser &&
-    currentUser.member &&
-    currentUser.member.memberType === "ROLE_ADMIN";
 
   return (
     <>
