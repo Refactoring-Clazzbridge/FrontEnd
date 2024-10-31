@@ -29,6 +29,8 @@ function Login() {
       const token = localStorage.getItem("token");
       const refreshToken = Cookies.get("refreshToken");
 
+      socket.emit("fetchData", token);
+
       console.log(token);
 
       if (token && isTokenValid(token)) {

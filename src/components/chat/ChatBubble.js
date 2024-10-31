@@ -13,8 +13,7 @@ export default function ChatBubble(props) {
   const { content, variant, timestamp, attachment = undefined, sender } = props;
   const isSent = variant === 'sent';
   const [isHovered, setIsHovered] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
-  const [isCelebrated, setIsCelebrated] = useState(false);
+
 
   return (
       <Box sx={{ maxWidth: '60%', minWidth: 'auto' }}>
@@ -26,7 +25,17 @@ export default function ChatBubble(props) {
           <Typography level="body-xs">
             {sender === 'You' ? sender : sender.name}
           </Typography>
-          <Typography level="body-xs">{timestamp}</Typography>
+          <Typography level="body-xs">
+            {new Date(timestamp).toLocaleString('ko-KR', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+            }).replace(/\./g, '.').replace(',', '')}
+          </Typography>
+
         </Stack>
         {attachment ? (
             <Sheet
@@ -103,35 +112,7 @@ export default function ChatBubble(props) {
                   {content}
                 </Typography>
               </Sheet>
-              {(isHovered || isLiked || isCelebrated) && (
-                  <Stack
-                      direction="row"
-                      spacing={0.5}
-                      sx={{
-                        justifyContent: isSent ? 'flex-end' : 'flex-start',
-                        position: 'absolute',
-                        top: '50%',
-                        p: 1.5,
-                      }}
-                  >
-                    <IconButton
-                        variant={isLiked ? 'soft' : 'plain'}
-                        color={isLiked ? 'danger' : 'neutral'}
-                        size="sm"
-                        onClick={() => setIsLiked((prevState) => !prevState)}
-                    >
-                      {isLiked ? '❤️' : <FavoriteBorderIcon />}
-                    </IconButton>
-                    <IconButton
-                        variant={isCelebrated ? 'soft' : 'plain'}
-                        color={isCelebrated ? 'warning' : 'neutral'}
-                        size="sm"
-                        onClick={() => setIsCelebrated((prevState) => !prevState)}
-                    >
-                      {isCelebrated ? '🎉' : <CelebrationOutlinedIcon />}
-                    </IconButton>
-                  </Stack>
-              )}
+
             </Box>
         )}
       </Box>
