@@ -159,13 +159,13 @@ function ProfileCard({
         >
           <Typography
             sx={{
-              fontSize: "15px",
+              fontSize: "12px",
               fontWeight: "500",
               color: isGoodOnline ? "#333" : "#b0b0b0",
               margin: "8px",
             }}
           >
-            {`No. ${seatNumber}`}
+            {`${seatNumber}`}
           </Typography>
         </div>
         <Stack

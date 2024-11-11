@@ -169,7 +169,7 @@ export default function FreeBoard() {
     title,
     content,
     boardId,
-    userCourseId,
+    courseId: userCourseId,
   };
 
   const postSave = async () => {

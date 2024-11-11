@@ -26,6 +26,7 @@ import { getCourseAllPosts } from "../../services/apis/post/get";
 import { getAllCourse } from "../../services/apis/course/get";
 import { getCourseIdForUser } from "../../services/apis/course/get";
 import PostComment from "../comment/PostComment";
+import Spinner from "../../components/common/Spinner";
 
 const columns = (isAdmin) => [
   { field: "id", headerName: "No", flex: 0.5, resizable: false },
@@ -94,6 +95,7 @@ export default function FreeBoardData() {
   const [openErrorSnackbar, setOpenErrorSnackbar] = useState(false); // Snackbar 열기 상태
   const [errorMessage, setErrorMessage] = useState("");
   const [courseId, setCourseId] = useState(""); // 강의 ID 상태 추가
+  const [loading, setLoading] = useState(true);
 
   const [originalRow, setOriginalRow] = useState(null);
   const [courses, setCourses] = useState([]);
@@ -123,6 +125,7 @@ export default function FreeBoardData() {
         setRows(updatedData);
       }
     }
+    setLoading(false);
   }, [currentUser]);
 
   const fetchBoardTypes = useCallback(async () => {
