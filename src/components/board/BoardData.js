@@ -27,6 +27,7 @@ import { getAllCourse } from "../../services/apis/course/get";
 import { getCourseIdForUser } from "../../services/apis/course/get";
 import PostComment from "../comment/PostComment";
 import Spinner from "../../components/common/Spinner";
+import "../../styles/post.css";
 
 const columns = (isAdmin) => [
   { field: "id", headerName: "No", flex: 0.5, resizable: false },
@@ -60,7 +61,7 @@ const columns = (isAdmin) => [
           display: "inline",
         }}
       >
-        {params.value}
+        {params.row.courseId ? params.value : "전체공지"}
       </Box>
     ),
   },
@@ -117,7 +118,6 @@ export default function FreeBoardData() {
       ) {
         const userCourseId = await getCourseIdForUser();
         setUserCourseId(userCourseId);
-        console.log(userCourseId, "userCourseId");
         const data = await getCourseAllPosts(userCourseId); // courseId에 따라 게시물 가져오기
         const updatedData = data.map((post) => ({
           ...post,
@@ -132,7 +132,6 @@ export default function FreeBoardData() {
     try {
       const data = await getBoardType(); // API 호출
       setBoardTypes(data); // 카테고리 데이터 상태에 저장
-      console.log(data);
     } catch (error) {
       console.error("Failed to fetch board types:", error);
     }
@@ -142,7 +141,6 @@ export default function FreeBoardData() {
     try {
       const data = await getAllCourse();
       setCourses([{ id: 0, title: "전체" }, ...data]);
-      console.log("강의 데이터 =", data);
     } catch (error) {
       console.error("강의 데이터를 가져오는 데 오류가 발생했습니다:", error);
     }
@@ -218,7 +216,6 @@ export default function FreeBoardData() {
       setBoardId("");
       setContent("");
     } catch (error) {
-      console.log(error, "updateError");
       switch (error.response.status) {
         case 400:
           setErrorMessage("게시글의 제목은 필수 입력 사항입니다.");
@@ -260,7 +257,6 @@ export default function FreeBoardData() {
 
   const postSave = async () => {
     try {
-      console.log(postForm, "postFormzzz");
       await savePost(postForm);
       setSuccessMessage("게시물이 성공적으로 저장되었습니다."); // 메시지 설정
       setOpenSuccessSnackbar(true); // Snackbar 열기
@@ -302,7 +298,6 @@ export default function FreeBoardData() {
       closeDeleteModal();
       setOpenDrawer(false);
     } catch (error) {
-      console.log(error, "deleteError");
       switch (error.response.status) {
         case 401:
           setErrorMessage("삭제 권한이 없습니다.");
@@ -319,9 +314,6 @@ export default function FreeBoardData() {
   const handleRowClick = (params) => {
     setSelectedRow(params.row); // 클릭된 행 데이터 저장
     setOpenDrawer(true); // Drawer 열기
-
-    console.log(currentUser.member.id, "currentUserId");
-    console.log(params.row, "selectdRow");
   };
 
   const handleCloseDrawer = () => {
@@ -339,6 +331,7 @@ export default function FreeBoardData() {
 
   return (
     <>
+      <Spinner visible={loading} />
       <Box
         sx={{
           display: "flex",
@@ -661,6 +654,9 @@ export default function FreeBoardData() {
             },
           }}
           rows={rows}
+          getRowClassName={(params) =>
+            params.row.courseId ? "" : "allNoticePost"
+          }
           checkboxSelection={currentUser?.member?.memberType === "ROLE_ADMIN"}
           onRowClick={handleRowClick}
           localeText={{
