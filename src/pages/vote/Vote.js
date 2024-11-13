@@ -511,6 +511,7 @@ const Vote = () => {
                           }}
                         >
                           <FormControlLabel
+                            className="voteOption"
                             key={option.rank} // 고유한 키
                             value={option.rank}
                             control={
@@ -522,6 +523,7 @@ const Vote = () => {
                               />
                             } // ROLE_ADMIN의 경우 비활성화
                             label={`${option.optionText}`}
+
                             // (현재 점유율: ${option.occupancyRate}, 투표 수: ${option.votes})
                           />
                         </Box>

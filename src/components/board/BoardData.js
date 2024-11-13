@@ -7,6 +7,8 @@ import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import Select from "@mui/material/Select";
+import SearchIcon from "@mui/icons-material/Search";
+import InputAdornment from "@mui/material/InputAdornment";
 import {
   Box,
   Button,
@@ -15,6 +17,8 @@ import {
   Typography,
   Snackbar,
   Alert,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import Tooltip from "@mui/material/Tooltip";
 import CustomModal from "../common/CustomModal";
@@ -88,7 +92,8 @@ const columns = (isAdmin) => [
 export default function FreeBoardData() {
   const [currentUser, setCurrentUser] = useState(null);
   const [userCourseId, setUserCourseId] = useState(null);
-  const [rows, setRows] = useState([]); // 상태 추가
+  const [originalRows, setOriginalRows] = useState([]); // 원본 데이터 보존
+  const [filteredRows, setFilteredRows] = useState([]); // 필터링된 데이터
   const [openDrawer, setOpenDrawer] = useState(false); // Drawer 열기 상태
   const [selectedRow, setSelectedRow] = useState(null); // 선택된 행 데이터
   const [openSuccessSnackbar, setOpenSuccessSnackbar] = useState(false); // Snackbar 열기 상태
@@ -102,6 +107,60 @@ export default function FreeBoardData() {
   const [courses, setCourses] = useState([]);
   const [boardTypes, setBoardTypes] = useState([]); // 카테고리 상태
   const [boardId, setBoardId] = useState(""); // 선택된 카테고리 ID 상태
+  const [selectedTab, setSelectedTab] = useState("all"); // 탭 상태 추가
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 200); // 300ms 디바운스
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // 검색 처리 함수
+  const handleSearch = (event) => {
+    setSearch(event.target.value);
+  };
+
+  // 탭 변경 핸들러
+  const handleTabChange = (event, newValue) => {
+    setSelectedTab(newValue);
+  };
+
+  // 검색과 탭 필터링을 결합한 필터링 로직
+  useEffect(() => {
+    if (!debouncedSearch.trim() && selectedTab === "all") {
+      setFilteredRows(originalRows);
+      return;
+    }
+
+    let filtered = [...originalRows];
+
+    // 탭 필터링
+    if (selectedTab !== "all") {
+      filtered = filtered.filter((row) => row.boardType === selectedTab);
+    }
+
+    // 검색어 필터링
+    if (debouncedSearch.trim()) {
+      const normalizedSearch = debouncedSearch
+        .replace(/\s+/g, "")
+        .toLowerCase();
+      filtered = filtered.filter((row) => {
+        return Object.values(row).some((field) => {
+          if (field == null) return false;
+          const normalizedField = String(field)
+            .replace(/\s+/g, "")
+            .toLowerCase();
+          return normalizedField.includes(normalizedSearch);
+        });
+      });
+    }
+
+    setFilteredRows(filtered);
+  }, [debouncedSearch, originalRows, selectedTab]);
 
   const fetchData = useCallback(async () => {
     if (currentUser && currentUser.member) {
@@ -111,7 +170,7 @@ export default function FreeBoardData() {
           ...post,
           courseTitle: post.courseTitle || "전체",
         }));
-        setRows(updatedData);
+        setOriginalRows(updatedData);
       } else if (
         currentUser.member.memberType === "ROLE_STUDENT" ||
         currentUser.member.memberType === "ROLE_TEACHER"
@@ -122,7 +181,7 @@ export default function FreeBoardData() {
         const updatedData = data.map((post) => ({
           ...post,
         }));
-        setRows(updatedData);
+        setOriginalRows(updatedData);
       }
     }
     setLoading(false);
@@ -335,13 +394,61 @@ export default function FreeBoardData() {
       <Box
         sx={{
           display: "flex",
-          justifyContent: "flex-end",
+          justifyContent: "space-between",
           width: "100%",
           height: "40px",
           gap: "12px",
           marginBottom: 2,
+          alignItems: "center",
         }}
       >
+        {/* 내비바 시작 */}
+        <Tabs
+          value={selectedTab}
+          onChange={handleTabChange}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{
+            "& .MuiTab-root": {
+              textTransform: "none",
+              minWidth: "auto",
+              padding: "8px 16px",
+              fontSize: "14px",
+              // fontWeight: selectedTab === "all" ? "bold" : "normal",
+              color: "#666",
+              "&.Mui-selected": {
+                color: "#34495e",
+                fontWeight: "bold",
+              },
+            },
+            "& .MuiTabs-indicator": {
+              backgroundColor: "#34495e",
+            },
+          }}
+        >
+          <Tab label="전체" value="all" />
+          {boardTypes.map((type) => (
+            <Tab key={type.id} label={type.type} value={type.type} />
+          ))}
+        </Tabs>
+        {/* 내비바 끝 */}
+
+        <TextField
+          className="searchBar"
+          size="small"
+          placeholder="검색어를 입력하세요..."
+          value={search}
+          onChange={handleSearch}
+          sx={{ width: "300px" }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
+
         <Tooltip title="작성하기">
           <Button
             variant="outlined"
@@ -653,7 +760,7 @@ export default function FreeBoardData() {
               border: "none",
             },
           }}
-          rows={rows}
+          rows={filteredRows}
           getRowClassName={(params) =>
             params.row.courseId ? "" : "allNoticePost"
           }
