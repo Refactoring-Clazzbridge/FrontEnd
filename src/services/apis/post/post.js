@@ -9,7 +9,7 @@ export const savePost = async (data) => {
     courseId,
   };
 
-  console.log("savedPost = ", savePost);
+  console.log("savedPost = ", savedPost);
 
   try {
     const response = await axios.post(`posts`, savedPost);

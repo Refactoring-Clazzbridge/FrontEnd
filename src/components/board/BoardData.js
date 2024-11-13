@@ -22,11 +22,23 @@ import { savePost } from "../../services/apis/post/post";
 import { deletePost as deletePostApi } from "../../services/apis/post/delete";
 import { updatePost } from "../../services/apis/post/put";
 import { getBoardType } from "../../services/apis/boardType/get";
+import { getCourseAllPosts } from "../../services/apis/post/get";
 import { getAllCourse } from "../../services/apis/course/get";
+import { getCourseIdForUser } from "../../services/apis/course/get";
 import PostComment from "../comment/PostComment";
 
-const columns = [
+const columns = (isAdmin) => [
   { field: "id", headerName: "No", flex: 0.5, resizable: false },
+  ...(isAdmin
+    ? [
+        {
+          field: "courseTitle",
+          headerName: "강의명",
+          flex: 1,
+          resizable: false,
+        },
+      ]
+    : []),
   {
     field: "boardType",
     flex: 1,
@@ -73,6 +85,7 @@ const columns = [
 
 export default function FreeBoardData() {
   const [currentUser, setCurrentUser] = useState(null);
+  const [userCourseId, setUserCourseId] = useState(null);
   const [rows, setRows] = useState([]); // 상태 추가
   const [openDrawer, setOpenDrawer] = useState(false); // Drawer 열기 상태
   const [selectedRow, setSelectedRow] = useState(null); // 선택된 행 데이터
@@ -88,9 +101,29 @@ export default function FreeBoardData() {
   const [boardId, setBoardId] = useState(""); // 선택된 카테고리 ID 상태
 
   const fetchData = useCallback(async () => {
-    const data = await getAllPosts(); // API 호출
-    setRows(data); // 상태 업데이트
-  }, []);
+    if (currentUser && currentUser.member) {
+      if (currentUser.member.memberType === "ROLE_ADMIN") {
+        const data = await getAllPosts();
+        const updatedData = data.map((post) => ({
+          ...post,
+          courseTitle: post.courseTitle || "전체",
+        }));
+        setRows(updatedData);
+      } else if (
+        currentUser.member.memberType === "ROLE_STUDENT" ||
+        currentUser.member.memberType === "ROLE_TEACHER"
+      ) {
+        const userCourseId = await getCourseIdForUser();
+        setUserCourseId(userCourseId);
+        console.log(userCourseId, "userCourseId");
+        const data = await getCourseAllPosts(userCourseId); // courseId에 따라 게시물 가져오기
+        const updatedData = data.map((post) => ({
+          ...post,
+        }));
+        setRows(updatedData);
+      }
+    }
+  }, [currentUser]);
 
   const fetchBoardTypes = useCallback(async () => {
     try {
@@ -133,13 +166,28 @@ export default function FreeBoardData() {
   const [isEditing, setIsEditing] = useState(false); // 수정 모드 상태 추가
 
   const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setTitle("");
+    setBoardId("");
+    setContent("");
+  };
 
   const openDeleteModal = () => setIsDeleteModalOpen(true);
-  const closeDeleteModal = () => setIsDeleteModalOpen(false);
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setTitle("");
+    setBoardId("");
+    setContent("");
+  };
 
   const openUpdateModal = () => setIsUpdateModalOpen(true);
-  const closeUpdateModal = () => setIsUpdateModalOpen(false);
+  const closeUpdateModal = () => {
+    setIsUpdateModalOpen(false);
+    setTitle("");
+    setBoardId("");
+    setContent("");
+  };
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -163,6 +211,9 @@ export default function FreeBoardData() {
       setIsUpdateModalOpen(false);
       setSuccessMessage("게시물이 성공적으로 수정되었습니다."); // 메시지 설정
       setOpenSuccessSnackbar(true); // Snackbar 열기
+      setTitle("");
+      setBoardId("");
+      setContent("");
     } catch (error) {
       console.log(error, "updateError");
       switch (error.response.status) {
@@ -192,18 +243,22 @@ export default function FreeBoardData() {
   const handleContentChange = (event) => {
     setContent(event.target.value);
   };
+  const isAdmin =
+    currentUser &&
+    currentUser.member &&
+    currentUser.member.memberType === "ROLE_ADMIN";
 
   const postForm = {
     title,
     content,
     boardId,
-    courseId,
+    courseId: isAdmin ? courseId : userCourseId,
   };
 
   const postSave = async () => {
     try {
+      console.log(postForm, "postFormzzz");
       await savePost(postForm);
-      console.log(postForm, "=======================================");
       setSuccessMessage("게시물이 성공적으로 저장되었습니다."); // 메시지 설정
       setOpenSuccessSnackbar(true); // Snackbar 열기
       await fetchData(); // 데이터 새로 고침
@@ -652,7 +707,7 @@ export default function FreeBoardData() {
             pageSizeOptions: ["5", "10", "20"],
           }}
           onRowSelectionModelChange={handleSelectionChange}
-          columns={columns}
+          columns={columns(isAdmin)}
           initialState={{
             pagination: {
               paginationModel: {

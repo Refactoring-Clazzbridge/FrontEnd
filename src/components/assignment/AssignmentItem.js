@@ -11,10 +11,13 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import { checkSubmission } from "../../services/apis/submission/get"; // checkSubmission API import
 import { submitAssignment } from "../../services/apis/submission/post";
+import { getStudentsByCourseId } from "../../services/apis/course/get";
 import CustomSnackbar from "../common/CustomSnackbar";
-import { Box } from "@mui/material";
+import { Box, List, ListItem } from "@mui/material";
 import ReactQuill from "react-quill";
 import hljs from "highlight.js";
+import { deleteAssignment } from "../../services/apis/assignment/delete";
+import CustomModal from "../../components/common/CustomModal";
 import "react-quill/dist/quill.snow.css";
 import "highlight.js/styles/github.css";
 import "../../styles/assignment.css";
@@ -38,53 +41,108 @@ const modules = {
 
 export default function AssignmentItem({
   currentUser,
+  courseId,
   studentCourseId,
-  assignments = [], // assignments의 기본값을 빈 배열로 설정
+  fetchAssignments,
+  assignments, // assignments의 기본값을 빈 배열로 설정
 }) {
   const [submissions, setSubmissions] = useState([]); // 초기값은 빈 배열
   const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [students, setStudents] = useState([]); // 수강생 리스트 상태
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [assignmentToDelete, setAssignmentToDelete] = useState(null); // 삭제할 과제 ID 저장
+  const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false); // 강사용 제출 내용 확인 모달
+  const [submissionStudent, setSubmissionStudent] = useState(""); // 제출 내용 저장
+
+  const openDeleteModal = (assignmentId) => {
+    setAssignmentToDelete(assignmentId);
+    setIsDeleteModalOpen(true);
+  };
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setAssignmentToDelete(null);
+  };
+
+  const openSubmissionModal = (student) => {
+    setSubmissionStudent(student);
+    setIsSubmissionModalOpen(true);
+  };
+
+  const closeSubmissionModal = () => {
+    setIsSubmissionModalOpen(false);
+    setSubmissionStudent(null);
+  };
 
   useEffect(() => {
-    // assignments가 변경될 때마다 submissions 업데이트
     const fetchSubmissions = async () => {
-      try {
-        const submissionResults = await Promise.all(
-          assignments.map((assignment) => {
-            console.log("Assignment ID:", assignment.assignmentId);
-            console.log("Student Course ID:", studentCourseId);
-            console.log(assignment, "assignment");
-            return checkSubmission(assignment.assignmentId, studentCourseId);
-          })
-        );
-        // submissions 배열을 assignments의 길이에 맞게 초기화
-        const newSubmissions = submissionResults.map((result, index) => {
-          // API 호출 결과가 undefined인 경우 기본값 설정
-          console.log(result, "result");
-          if (!result) {
-            console.warn(
-              `No result for assignment ID: ${assignments[index].assignmentId}`
+      if (currentUser) {
+        if (currentUser.member.memberType === "ROLE_STUDENT") {
+          // 학생인 경우 자신의 제출 상태 가져오기
+          try {
+            const submissionResults = await Promise.all(
+              assignments.map((assignment) => {
+                return checkSubmission(
+                  assignment.assignmentId,
+                  studentCourseId
+                );
+              })
             );
-            return { text: "", submitted: false };
+            const newSubmissions = submissionResults.map((result, index) => {
+              if (!result) {
+                console.log(
+                  `No result for assignment ID: ${assignments[index].assignmentId}`
+                );
+                return { text: "", submitted: false };
+              }
+              return {
+                text: result.content || "",
+                submitted: result.submitted,
+                submissionDate: result.submissionDate,
+              };
+            });
+            setSubmissions(newSubmissions);
+          } catch (error) {
+            showSnackbar("제출 상태를 가져오는 데 실패했습니다.", "error");
           }
-          return {
-            text: result.content || "", // API에서 가져온 내용
-            submitted: result.submitted, // 제출 여부
-            submissionDate: result.submissionDate,
-          };
-        });
-
-        setSubmissions(newSubmissions);
-      } catch (error) {
-        showSnackbar("제출 상태를 가져오는 데 실패했습니다.", "error");
+        }
       }
     };
 
-    if (assignments.length > 0) {
+    if (assignments.length > 0 || currentUser) {
       fetchSubmissions();
     }
-  }, [assignments, studentCourseId]); // assignments와 studentCourseId가 변경될 때만 실행
+  }, [assignments, studentCourseId, currentUser]); // assignments, studentCourseId, currentUser가 변경될 때만 실행
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      if (
+        currentUser &&
+        currentUser.member &&
+        currentUser.member.memberType === "ROLE_TEACHER"
+      ) {
+        try {
+          const allStudents = await Promise.all(
+            assignments.map(async (assignment) => {
+              const response = await getStudentsByCourseId(
+                assignment.assignmentId
+              );
+              console.log(response, "response");
+              return {
+                assignmentId: assignment.assignmentId,
+                students: response,
+              };
+            })
+          );
+          setStudents(allStudents);
+        } catch (error) {
+          console.error("수강생 리스트를 불러오는 데 실패했습니다.", error);
+        }
+      }
+    };
+    fetchStudents();
+  }, [currentUser, studentCourseId, assignments]);
 
   const showSnackbar = (message, severity) => {
     setSnackbarMessage(message);
@@ -93,10 +151,6 @@ export default function AssignmentItem({
   };
 
   const handleSubmissionChange = (index, value) => {
-    // 입력된 값을 로그로 출력
-    console.log(`Input for assignment ${index}:`, value);
-
-    // submissions 배열이 올바르게 초기화되었는지 확인
     if (submissions[index]) {
       const newSubmissions = [...submissions];
       newSubmissions[index].text = value;
@@ -111,7 +165,7 @@ export default function AssignmentItem({
   };
 
   const handleSubmit = async (index) => {
-    const { text } = submissions[index] || {}; // 안전하게 접근하기 위해 기본값 설정
+    const { text } = submissions[index] || {};
     if (text) {
       const formData = new FormData();
       formData.append("assignmentId", assignments[index].assignmentId);
@@ -121,12 +175,28 @@ export default function AssignmentItem({
       try {
         await submitAssignment(formData);
         const newSubmissions = [...submissions];
-        newSubmissions[index] = { text, submitted: true }; // 제출 후 업데이트
+        newSubmissions[index] = { text, submitted: true };
         setSubmissions(newSubmissions);
         showSnackbar("과제가 성공적으로 제출되었습니다!", "success");
       } catch (error) {
         console.error("과제 제출 중 오류 발생", error);
         showSnackbar("과제 제출이 실패했습니다.", "error");
+      }
+    }
+  };
+
+  const handleDelete = async () => {
+    if (assignmentToDelete) {
+      try {
+        await deleteAssignment(assignmentToDelete); // API 호출로 삭제
+        showSnackbar("과제가 삭제되었습니다.", "success");
+        closeDeleteModal(); // 모달 닫기
+        setAssignmentToDelete(null);
+        await fetchAssignments();
+      } catch (error) {
+        console.error("과제 삭제 중 오류 발생", error);
+        showSnackbar("과제 삭제에 실패했습니다.", "error");
+        setAssignmentToDelete(null);
       }
     }
   };
@@ -142,11 +212,17 @@ export default function AssignmentItem({
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-      {assignments.length > 0 ? ( // assignments가 있을 때만 렌더링
+      {assignments.length > 0 ? (
         assignments.map((assignment, index) => {
           const daysRemaining = getDaysRemaining(assignment.dueDate);
-          const submission = submissions[index] || {}; // 안전하게 접근하기 위해 기본값 설정
-          const isPastDue = daysRemaining < 0; // 마감 날짜가 지났는지 확인
+          const submission = submissions[index] || {};
+          const isPastDue = daysRemaining < 0;
+          const assignmentStudents =
+            students.find(
+              (studentGroup) =>
+                studentGroup.assignmentId === assignment.assignmentId
+            )?.students || [];
+
           return (
             <Accordion key={assignment.assignmentId}>
               <AccordionSummary
@@ -158,6 +234,19 @@ export default function AssignmentItem({
                 <Box>
                   <Typography sx={{ fontWeight: 600, marginBottom: 1 }}>
                     {assignment.title}
+                    {currentUser &&
+                      currentUser.member &&
+                      currentUser.member.memberType === "ROLE_ADMIN" && (
+                        <span
+                          style={{
+                            fontSize: "12px",
+                            color: "gray",
+                            marginLeft: "8px",
+                          }}
+                        >
+                          ({assignment.courseName})
+                        </span>
+                      )}
                   </Typography>
                   <Typography sx={{ fontSize: "12px" }}>
                     마감 날짜: {assignment.dueDate}
@@ -170,47 +259,53 @@ export default function AssignmentItem({
                         color: "darkred",
                       }}
                     >
-                      {daysRemaining >= 0
+                      {daysRemaining > 0
                         ? `${daysRemaining}일 남았습니다 🔥`
-                        : "마감 완료"}
+                        : daysRemaining === 0
+                          ? "마감 당일입니다 🧨"
+                          : "마감 완료"}
                     </Typography>
                   </Typography>
                 </Box>
-                {currentUser.member.memberType === "ROLE_STUDENT" && (
-                  <>
-                    {submission.submitted ? (
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          marginLeft: "auto",
-                          marginRight: "16px",
-                        }}
-                      >
-                        <CheckCircleIcon
-                          sx={{ color: "darkgreen", marginRight: "4px" }}
-                        />
-                        <Typography sx={{ color: "darkgreen" }}>
-                          제출 완료
-                        </Typography>
-                      </Box>
-                    ) : (
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          marginLeft: "auto",
-                          marginRight: "16px",
-                        }}
-                      >
-                        <CancelIcon
-                          sx={{ color: "brown", marginRight: "4px" }}
-                        />
-                        <Typography sx={{ color: "brown" }}>미제출</Typography>
-                      </Box>
-                    )}
-                  </>
-                )}
+                {currentUser &&
+                  currentUser.member &&
+                  currentUser.member.memberType === "ROLE_STUDENT" && (
+                    <>
+                      {submission.submitted ? (
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            marginLeft: "auto",
+                            marginRight: "16px",
+                          }}
+                        >
+                          <CheckCircleIcon
+                            sx={{ color: "darkgreen", marginRight: "4px" }}
+                          />
+                          <Typography sx={{ color: "darkgreen" }}>
+                            제출 완료
+                          </Typography>
+                        </Box>
+                      ) : (
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            marginLeft: "auto",
+                            marginRight: "16px",
+                          }}
+                        >
+                          <CancelIcon
+                            sx={{ color: "brown", marginRight: "4px" }}
+                          />
+                          <Typography sx={{ color: "brown" }}>
+                            미제출
+                          </Typography>
+                        </Box>
+                      )}
+                    </>
+                  )}
               </AccordionSummary>
               <AccordionDetails
                 sx={{
@@ -227,7 +322,9 @@ export default function AssignmentItem({
                     __html: sanitizer(`${assignment.description}`),
                   }}
                 />
-                {currentUser.member.memberType === "ROLE_STUDENT" &&
+                {currentUser &&
+                  currentUser.member &&
+                  currentUser.member.memberType === "ROLE_STUDENT" &&
                   !submission.submitted && (
                     <ReactQuill
                       theme="snow"
@@ -237,7 +334,9 @@ export default function AssignmentItem({
                       style={{ width: "100%" }}
                     />
                   )}
-                {currentUser.member.memberType === "ROLE_STUDENT" &&
+                {currentUser &&
+                  currentUser.member &&
+                  currentUser.member.memberType === "ROLE_STUDENT" &&
                   submission.submitted && (
                     <>
                       <Typography
@@ -260,30 +359,185 @@ export default function AssignmentItem({
                       </Typography>
                     </>
                   )}
-                {currentUser.member.memberType === "ROLE_STUDENT" && (
-                  <AccordionActions sx={{ padding: 0 }}>
-                    <Button
-                      onClick={() => handleSubmit(index)}
-                      disabled={
-                        submission.submitted || isPastDue || !submission.text
-                      }
-                      variant="contained"
-                    >
-                      제출
-                    </Button>
-                  </AccordionActions>
-                )}
-                {currentUser.member.memberType === "ROLE_TEACHER" && (
-                  <Box sx={{ borderTop: "1px solid #e0e0e0", paddingTop: 2 }}>
-                    <Typography>제출 상태:</Typography>
-                    {submissions.map((submission, subIndex) => (
-                      <Typography key={subIndex}>
-                        학생 {subIndex + 1}:{" "}
-                        {submission.submitted ? "제출 완료" : "미제출"}
+                {currentUser &&
+                  currentUser.member &&
+                  currentUser.member.memberType === "ROLE_STUDENT" && (
+                    <AccordionActions sx={{ padding: 0 }}>
+                      <Button
+                        onClick={() => handleSubmit(index)}
+                        disabled={
+                          submission.submitted || isPastDue || !submission.text
+                        }
+                        variant="contained"
+                      >
+                        제출
+                      </Button>
+                    </AccordionActions>
+                  )}
+                {currentUser &&
+                  currentUser.member &&
+                  currentUser.member.memberType === "ROLE_TEACHER" && (
+                    <Box sx={{ borderTop: "1px solid #e0e0e0" }}>
+                      <Typography
+                        sx={{
+                          fontSize: "12px",
+                          marginTop: 1,
+                          marginBottom: "2px",
+                        }}
+                      >
+                        총 수강생 수: {assignmentStudents.length}명
                       </Typography>
-                    ))}
-                  </Box>
-                )}
+                      <Typography
+                        sx={{
+                          fontSize: "12px",
+                          color: "gray",
+                          marginBottom: 1,
+                        }}
+                      >
+                        수강생 이름을 클릭해 제출 내용을 확인해보세요!
+                      </Typography>
+
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          width: "50%",
+                          marginBottom: 2,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            flex: 1,
+                            marginRight: 2,
+                            borderRadius: 1,
+                          }}
+                        >
+                          <Typography
+                            sx={{
+                              fontWeight: 600,
+                              fontSize: "14px",
+                              color: "darkgreen",
+                            }}
+                          >
+                            제출 완료 (
+                            {
+                              assignmentStudents.filter(
+                                (student) => student.submitted
+                              ).length
+                            }
+                            명)
+                          </Typography>
+                          <List sx={{ maxHeight: 150, overflowY: "auto" }}>
+                            {assignmentStudents
+                              .filter((student) => student.submitted)
+                              .map((student, subIndex) => (
+                                <ListItem
+                                  key={subIndex}
+                                  sx={{ paddingLeft: 0 }}
+                                >
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                    }}
+                                  >
+                                    <img
+                                      src={student.avatarImage} // 프로필 사진 URL
+                                      alt={`${student.name}'s profile`}
+                                      style={{
+                                        width: 30,
+                                        height: 30,
+                                        borderRadius: "50%",
+                                        marginRight: 8,
+                                      }}
+                                    />
+                                    <Typography
+                                      onClick={() =>
+                                        openSubmissionModal(student)
+                                      }
+                                      sx={{
+                                        fontWeight: 600,
+                                        cursor: "pointer",
+                                      }}
+                                    >
+                                      {student.name}
+                                    </Typography>
+                                  </Box>
+                                </ListItem>
+                              ))}
+                          </List>
+                        </Box>
+
+                        <Box
+                          sx={{
+                            flex: 1,
+                            borderRadius: 1,
+                          }}
+                        >
+                          <Typography
+                            sx={{
+                              fontWeight: 600,
+                              fontSize: "14px",
+                              color: "darkred",
+                            }}
+                          >
+                            미제출 (
+                            {
+                              assignmentStudents.filter(
+                                (student) => !student.submitted
+                              ).length
+                            }
+                            명)
+                          </Typography>
+                          <List
+                            sx={{
+                              maxHeight: 150,
+                              overflowY: "auto",
+                            }}
+                          >
+                            {assignmentStudents
+                              .filter((student) => !student.submitted)
+                              .map((student, subIndex) => (
+                                <ListItem
+                                  key={subIndex}
+                                  sx={{ paddingLeft: 0 }}
+                                >
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                    }}
+                                  >
+                                    <img
+                                      src={student.avatarImage} // 프로필 사진 URL
+                                      alt={`${student.name}'s profile`}
+                                      style={{
+                                        width: 30,
+                                        height: 30,
+                                        borderRadius: "50%",
+                                        marginRight: 8,
+                                      }}
+                                    />
+                                    <Typography>{student.name}</Typography>
+                                  </Box>
+                                </ListItem>
+                              ))}
+                          </List>
+                        </Box>
+                      </Box>
+                      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                        <Button
+                          onClick={() =>
+                            openDeleteModal(assignment.assignmentId)
+                          }
+                          variant="outlined"
+                          color="error"
+                        >
+                          삭제
+                        </Button>
+                      </Box>
+                    </Box>
+                  )}
               </AccordionDetails>
             </Accordion>
           );
@@ -297,6 +551,120 @@ export default function AssignmentItem({
         severity={snackbarSeverity}
         onClose={handleCloseSnackbar}
       />
+
+      <CustomModal isOpen={isDeleteModalOpen} closeModal={closeDeleteModal}>
+        <Box
+          sx={{
+            display: "flex",
+            margin: "auto",
+            width: "100%",
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "column",
+            gap: "10px",
+          }}
+        >
+          <h3>과제 삭제하기</h3>
+          <p>해당 과제를 삭제하시겠습니까?</p>
+
+          <Box
+            sx={{
+              display: "flex",
+              width: "100%",
+              alignItems: "center",
+              justifyContent: "center",
+              flexDirection: "row",
+              gap: "24px",
+              margin: "16px 0",
+            }}
+          >
+            <Button
+              variant="outlined"
+              onClick={closeDeleteModal}
+              sx={{
+                width: "120px",
+                height: "40px",
+                borderColor: "#34495e",
+                color: "#34495e",
+              }}
+            >
+              취소
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => {
+                handleDelete(assignmentToDelete);
+              }}
+              sx={{
+                width: "120px",
+                height: "40px",
+                backgroundColor: "#34495e",
+                fontWeight: 600,
+              }}
+            >
+              삭제하기
+            </Button>
+          </Box>
+        </Box>
+      </CustomModal>
+
+      <CustomModal
+        isOpen={isSubmissionModalOpen}
+        closeModal={closeSubmissionModal}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            margin: "auto",
+            width: "100%",
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "column",
+            gap: "10px",
+          }}
+        >
+          <h3>
+            {submissionStudent ? submissionStudent.name : ""}님의 제출 내용
+          </h3>
+          <Box
+            sx={{
+              width: "100%",
+              border: "1px solid #e0e0e0",
+              borderRadius: 1,
+              padding: 2,
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            <Typography
+              dangerouslySetInnerHTML={{
+                __html: sanitizer(
+                  `${submissionStudent ? submissionStudent.content : ""}`
+                ),
+              }}
+            ></Typography>
+          </Box>
+          <Box
+            sx={{ width: "100%", display: "flex", justifyContent: "flex-end" }}
+          >
+            <Typography sx={{ fontSize: "12px", color: "gray" }}>
+              제출 날짜:{" "}
+              {submissionStudent ? submissionStudent.submissionDate : ""}
+            </Typography>
+          </Box>
+          <Button
+            variant="outlined"
+            onClick={closeSubmissionModal}
+            sx={{
+              width: "120px",
+              height: "40px",
+              borderColor: "#34495e",
+              color: "#34495e",
+            }}
+          >
+            닫기
+          </Button>
+        </Box>
+      </CustomModal>
     </Box>
   );
 }
