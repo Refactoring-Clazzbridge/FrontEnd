@@ -16,10 +16,13 @@ import apiClient from "../../shared/apiClient";
 import { DataGrid } from "@mui/x-data-grid"; // DataGrid 임포트
 import { v4 as uuidv4 } from "uuid"; // 고유한 ID를 생성하기 위해 uuid 패키지 사용
 import CustomSnackbar from "../../components/common/CustomSnackbar"; // 커스텀 스낵바
+import CustomModal from "../../components/common/CustomModal"; // 커스텀 모달
+
 import PollIcon from "@mui/icons-material/Poll";
 import "../../styles/vote.css";
 
 const Vote = () => {
+  const [openModal, setOpenModal] = useState(false);
   const [open, setOpen] = useState("");
   const [selectedVotes, setSelectedVotes] = useState([]); // 선택한 투표(전체) 상태 관리
 
@@ -32,7 +35,6 @@ const Vote = () => {
 
   const [events, setEvents] = useState("");
   const [courseOption, setCourseOption] = useState("");
-  //const [courseCheck, setCourseCheck] = useState('');
 
   const [openModalVoteInfo, setOpenModalVoteInfo] = useState(false); // Modal 열기/닫기 상태
   const [selectedVote, setSelectedVote] = useState(null); // 선택된 투표
@@ -48,7 +50,6 @@ const Vote = () => {
     setOpenSnackbar(false); // 스낵바 닫기
   };
   const role = localStorage.getItem("membertype");
-  const [hasVoted, setHasVoted] = useState(false);
 
   const renderButtons = () => {
     if (role === "ROLE_TEACHER") {
@@ -61,16 +62,142 @@ const Vote = () => {
           >
             투표 등록
           </Button>
-          <Button variant="outlined" onClick={deleteSelectedVote}>
-            삭제
-          </Button>
+          <div>
+            <Button
+              variant="outlined"
+              onClick={deleteSelectedVote}
+              sx={{ mr: 2 }}
+            >
+              투표 삭제
+            </Button>
+
+            {/* Custom Modal */}
+            <CustomModal
+              isOpen={openModal}
+              closeModal={() => setOpenModal(false)}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  margin: "auto",
+                  width: "100%",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexDirection: "column",
+                  gap: "10px",
+                }}
+              >
+                <h3>투표 삭제</h3>
+                <p>선택된 투표 {selectedVotes.length}개를 삭제하시겠습니까?</p>
+                <Box
+                  sx={{
+                    display: "flex",
+                    width: "100%",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexDirection: "row",
+                    gap: "24px",
+                    margin: "16px 0",
+                  }}
+                >
+                  <Button
+                    variant="outlined"
+                    onClick={() => setOpenModal(false)}
+                    sx={{
+                      width: "120px",
+                      height: "40px",
+                      borderColor: "#34495e",
+                      color: "#34495e",
+                    }}
+                  >
+                    취소
+                  </Button>
+                  <Button
+                    variant="contained"
+                    onClick={handleDeleteConfirmation}
+                    sx={{
+                      width: "120px",
+                      height: "40px",
+                      backgroundColor: "#34495e",
+                      fontWeight: 600,
+                    }}
+                  >
+                    삭제
+                  </Button>
+                </Box>
+              </Box>
+            </CustomModal>
+          </div>
         </>
       );
     } else if (role === "ROLE_ADMIN") {
       return (
-        <Button variant="outlined" onClick={deleteSelectedVote}>
-          삭제
-        </Button>
+        <div>
+          <Button
+            variant="outlined"
+            onClick={deleteSelectedVote}
+            sx={{ mr: 2 }}
+          >
+            투표 삭제
+          </Button>
+
+          {/* Custom Modal */}
+          <CustomModal
+            isOpen={openModal}
+            closeModal={() => setOpenModal(false)}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                margin: "auto",
+                width: "100%",
+                alignItems: "center",
+                justifyContent: "center",
+                flexDirection: "column",
+                gap: "10px",
+              }}
+            >
+              <h3>투표 삭제</h3>
+              <p>선택된 투표 {selectedVotes.length}개를 삭제하시겠습니까?</p>
+              <Box
+                sx={{
+                  display: "flex",
+                  width: "100%",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexDirection: "row",
+                  gap: "24px",
+                  margin: "16px 0",
+                }}
+              >
+                <Button
+                  variant="outlined"
+                  onClick={() => setOpenModal(false)}
+                  sx={{
+                    width: "120px",
+                    height: "40px",
+                    borderColor: "#34495e",
+                    color: "#34495e",
+                  }}
+                >
+                  취소
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={handleDeleteConfirmation}
+                  sx={{
+                    width: "120px",
+                    height: "40px",
+                    backgroundColor: "#34495e",
+                    fontWeight: 600,
+                  }}
+                >
+                  삭제
+                </Button>
+              </Box>
+            </Box>
+          </CustomModal>
+        </div>
       );
     }
     // ROLE_STUDENT는 아무 버튼도 표시되지 않음
@@ -83,7 +210,6 @@ const Vote = () => {
     if (selectedVote) {
       fetchVoteInfo(selectedVote.id);
     }
-    //fetchVote();
   }, [selectedVote]); // 2번째 인수에 빈 배열을 줘서 한 번만 실행
 
   const fetchEvents = () => {
@@ -161,27 +287,6 @@ const Vote = () => {
       });
   };
 
-  // 투표 버튼 렌더링
-  const renderVoteButton = () => {
-    if (hasVoted) {
-      return (
-        <Button variant="outlined" disabled>
-          이미 투표함
-        </Button>
-      );
-    } else {
-      return (
-        <Button
-          variant="outlined"
-          onClick={handleVoteSubmit}
-          style={{ marginTop: "6px", marginRight: "8px" }}
-        >
-          투표하기
-        </Button>
-      );
-    }
-  };
-
   // 폼 초기화
   const resetForm = () => {
     setNewEventTitle("");
@@ -255,48 +360,41 @@ const Vote = () => {
     addVote(newVote);
   };
 
-  const deleteSelectedVote = () => {
-    // 선택된 투표 수를 확인
-    const voteCount = selectedVotes.length;
+  const handleDeleteConfirmation = () => {
+    const deletePromises = selectedVotes.map((id) => {
+      console.log("Delete vote with ID:", id); // 삭제할 voteId 확인
+      return apiClient.delete(`vote/${id}`);
+    });
 
-    if (voteCount === 0) {
+    Promise.all(deletePromises)
+      .then(() => {
+        const updatedEvents = events.filter(
+          (event) => !selectedVotes.includes(event.id)
+        );
+        setEvents(updatedEvents);
+        setSelectedVotes([]); // 선택한 투표 초기화
+        setSnackbarMessage(`${selectedVotes.length}개 투표를 삭제했습니다.`);
+        setSnackbarSeverity("success");
+        setOpenSnackbar(true);
+      })
+      .catch((error) => {
+        console.error("투표 정보를 삭제하지 못했습니다", error.response.data);
+        setSnackbarMessage("강의 삭제 실패: ", error.response.data.message);
+        setSnackbarSeverity("error");
+        setOpenSnackbar(true);
+      });
+
+    setOpenModal(false); // 모달 닫기
+  };
+
+  const deleteSelectedVote = () => {
+    if (selectedVotes.length === 0) {
       setSnackbarMessage("삭제할 투표를 선택하세요.");
       setSnackbarSeverity("error"); // 실패 스낵바
       setOpenSnackbar(true);
       return;
     }
-
-    const confimation = window.confirm(
-      `선택된 투표 ${voteCount}개를 삭제하시겠습니까?`
-    ); // window.confirm 팝업창
-
-    if (confimation) {
-      const deletePromises = selectedVotes.map((id) => {
-        console.log("Delete vote with ID:", id); // 삭제할 voteId 확인
-        return apiClient.delete(`vote/${id}`);
-      });
-
-      Promise.all(deletePromises)
-        .then(() => {
-          const updatedEvents = events.filter(
-            (event) => !selectedVotes.includes(event.id)
-          );
-          setEvents(updatedEvents);
-          setSelectedVotes([]); // 선택한 투표 초기화
-          setSnackbarMessage(`${voteCount}개 투표를 삭제했습니다.`);
-          setSnackbarSeverity("success");
-          setOpenSnackbar(true);
-        })
-        .catch((error) => {
-          console.error("투표 정보를 삭제하지 못했습니다", error.response.data);
-          setSnackbarMessage("강의 삭제 실패: ", error.response.data.message);
-          setSnackbarSeverity("error");
-          setOpenSnackbar(true);
-        });
-    } else {
-      // 사용자가 삭제를 취소했을 때의 처리
-      return;
-    }
+    setOpenModal(true); // 모달 열기
   };
 
   return (
@@ -418,7 +516,7 @@ const Vote = () => {
               },
             }}
             pageSizeOptions={[10]}
-            checkboxSelection // 행 선택을 위한 체크박스 추가
+            checkboxSelection={role !== "ROLE_STUDENT"} // 행 선택을 위한 체크박스 추가
             onRowSelectionModelChange={(newSelection) => {
               setSelectedVotes(newSelection); // 상태 업데이트
             }}
@@ -511,7 +609,6 @@ const Vote = () => {
                           }}
                         >
                           <FormControlLabel
-                            className="voteOption"
                             key={option.rank} // 고유한 키
                             value={option.rank}
                             control={
@@ -523,7 +620,6 @@ const Vote = () => {
                               />
                             } // ROLE_ADMIN의 경우 비활성화
                             label={`${option.optionText}`}
-
                             // (현재 점유율: ${option.occupancyRate}, 투표 수: ${option.votes})
                           />
                         </Box>
@@ -541,7 +637,6 @@ const Vote = () => {
                         backgroundColor: "#34495e",
                         color: "white",
                         fontWeight: 600,
-                        border: "none",
                       }}
                     >
                       투표하기
@@ -550,10 +645,144 @@ const Vote = () => {
                 </Box>
               </>
             ) : (
-              <Typography variant="body1">
-                투표 정보를 불러오는 중...
-              </Typography>
+              <Typography variant="body1">투표 정보를 불러오는 중…</Typography>
             )}
+          </Box>
+        </Modal>
+
+        {/* 모달 */}
+        <Modal
+          open={open}
+          onClose={handleClose}
+          aria-labelledby="modal-title"
+          aria-describedby="modal-description"
+        >
+          <Box
+            sx={{
+              position: "absolute",
+              borderRadius: "8px",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              width: 600,
+              minHeight: 200,
+              maxWidth: "100%",
+              maxHeight: "90%",
+              overflowY: "auto",
+              padding: "26px",
+              backgroundColor: "white",
+            }}
+          >
+            <Typography id="modal-title" variant="h6">
+              {"투표 등록"}
+            </Typography>
+
+            {/* 입력 필드 */}
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 2,
+                mt: 2,
+              }}
+            >
+              <DateTimePicker
+                label="시작 날짜"
+                value={newEventStart}
+                onChange={(newValue) => setNewEventStart(moment(newValue))}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    fullWidth
+                    style={{ marginBottom: "20px" }}
+                  />
+                )}
+              />
+              <DateTimePicker
+                label="종료 날짜"
+                value={newEventEnd}
+                onChange={(newValue) => setNewEventEnd(moment(newValue))}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    fullWidth
+                    style={{ marginBottom: "20px" }}
+                  />
+                )}
+              />
+              {dateError && (
+                <Typography color="error" variant="body2">
+                  {dateError}
+                </Typography>
+              )}
+            </Box>
+            <Box sx={{ display: "grid" }}>
+              <TextField
+                fullwidth
+                label="제목"
+                value={newEventTitle}
+                onChange={(e) => {
+                  setNewEventTitle(e.target.value);
+                }}
+                style={{ marginTop: "16px" }}
+              />
+            </Box>
+            <Box sx={{ display: "grid" }}>
+              <TextField
+                fullwidth
+                label="내용"
+                value={newEventDescription}
+                onChange={(e) => {
+                  setNewEventDescription(e.target.value);
+                }}
+                style={{ marginTop: "16px" }}
+                multiline // TextField를 textarea로 변경
+                rows={4} // 표시할 줄 수 (필요에 따라 조정 가능)
+              />
+            </Box>
+            {/* 옵션 입력 필드 */}
+            {newEventOptionText.map((option, index) => (
+              <Box
+                key={index}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginBottom: "8px",
+                  marginTop: "14px",
+                }}
+              >
+                <TextField
+                  label={`옵션 ${index + 1}`}
+                  value={option}
+                  onChange={(e) => {
+                    const updatedOptionText = [...newEventOptionText];
+                    updatedOptionText[index] = e.target.value; // 값 변경
+                    setNewEventOptionText(updatedOptionText);
+                  }}
+                  style={{ marginRight: "10px" }}
+                />
+                <Button
+                  variant="outlined"
+                  color="error"
+                  onClick={() => handleDeleteOptionText(index)}
+                >
+                  삭제
+                </Button>
+              </Box>
+            ))}
+            <Button variant="outlined" onClick={handleAddOptionText}>
+              옵션 추가
+            </Button>
+
+            {/* 저장 및 취소 버튼 */}
+            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 3 }}>
+              <Button variant="outlined" onClick={handleSaveEvent}>
+                저장
+              </Button>
+              <Button variant="outlined" onClick={handleClose} sx={{ ml: 2 }}>
+                취소
+              </Button>
+            </Box>
           </Box>
         </Modal>
 
