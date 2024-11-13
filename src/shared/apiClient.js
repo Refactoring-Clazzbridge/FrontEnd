@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Axios 인스턴스 생성
 const apiClient = axios.create({
-  baseURL: "http://localhost:8080/api/", // 기본 URL 추가
+  baseURL: "http://default-back-service-e27ef-100126159-b0eb9aec7a73.kr.lb.naverncp.com:8080/api/", // 기본 URL 추가
 });
 
 // 요청 인터셉터 설정: 모든 요청에 Authorization 헤더를 자동으로 추가

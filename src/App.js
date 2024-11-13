@@ -20,12 +20,6 @@ function App() {
     setIsLoggedIn(true);
   };
 
-  // useEffect(() => {
-  //   console.log("isLoggedIn 상태 변경:", isLoggedIn);
-  // }, [isLoggedIn]);
-
-  console.log("App.js, ", isLoggedIn);
-
   return (
     <ThemeProvider theme={theme}>
       <UserProvider>
