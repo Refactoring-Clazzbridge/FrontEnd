@@ -644,76 +644,94 @@ const Vote = () => {
                             backgroundColor: 'white',
                         }}
                     >
-                      투표
-                    </Typography>
-                  </Box>
+                        <Typography id="modal-title" variant="h6">
+                            {"투표 등록"}
+                        </Typography>
 
-                  {voteInfo.voteOptionInfoList &&
-                  voteInfo.voteOptionInfoList.length > 0 ? (
-                    <RadioGroup
-                      value={selectedOption || ""} // 선택된 option의 voteOptionId를 설정
-                      onChange={(e) => {
-                        const selectedValue = Number(e.target.value); // 선택된 value (voteOptionId)를 가져옴
-                        console.log("선택된 값:", selectedValue); // 선택된 값 확인
-
-                        setSelectedOption(selectedValue); // 상태 업데이트
-                      }}
-                    >
-                      {voteInfo.voteOptionInfoList.map((option) => (
+                        {/* 입력 필드 */}
                         <Box
-                          sx={{
-                            width: "100%",
-                            backgroundColor: "#f6f8fa",
-                            borderRadius: "4px",
-                            padding: "8px",
-                            marginBottom: "8px",
-                          }}
+                            sx={{
+                                display: "grid",
+                                gridTemplateColumns: "1fr 1fr",
+                                gap: 2,
+                                mt: 2,
+                            }}
                         >
-                          <FormControlLabel
-                            className="voteOption"
-                            key={option.rank} // 고유한 키
-                            value={option.rank}
-                            control={
-                              <Radio
-                                disabled={
-                                  role === "ROLE_ADMIN" ||
-                                  role === "ROLE_TEACHER"
-                                }
-                              />
-                            } // ROLE_ADMIN의 경우 비활성화
-                            label={`${option.optionText}`}
-
-                            // (현재 점유율: ${option.occupancyRate}, 투표 수: ${option.votes})
-                          />
+                            <DateTimePicker
+                                label="시작 날짜"
+                                value={newEventStart}
+                                onChange={(newValue) => setNewEventStart(moment(newValue))}
+                                renderInput={(params) => <TextField {...params} fullWidth style={{ marginBottom: '20px' }} />}
+                            />
+                            <DateTimePicker
+                                label="종료 날짜"
+                                value={newEventEnd}
+                                onChange={(newValue) => setNewEventEnd(moment(newValue))}
+                                renderInput={(params) => <TextField {...params} fullWidth style={{ marginBottom: '20px' }} />}
+                            />
+                            {dateError && (
+                                <Typography color="error" variant="body2">
+                                    {dateError}
+                                </Typography>
+                            )}
                         </Box>
-                      ))}
-                    </RadioGroup>
-                  ) : (
-                    <Typography variant="body1">옵션이 없습니다.</Typography> // 옵션이 없을 때 메시지
-                  )}
-                  {/* 투표 버튼은 ROLE_ADMIN의 경우 표시하지 않음 */}
-                  {role !== ("ROLE_ADMIN" || "ROLE_TEACHER") && (
-                    <Button
-                      variant="outlined"
-                      onClick={handleVoteSubmit}
-                      sx={{
-                        backgroundColor: "#34495e",
-                        color: "white",
-                        fontWeight: 600,
-                      }}
-                    >
-                      투표하기
-                    </Button>
-                  )}
-                </Box>
-              </>
-            ) : (
-              <Typography variant="body1">
-                투표 정보를 불러오는 중...
-              </Typography>
-            )}
-          </Box>
-        </Modal>
+                        <Box sx={{ display: "grid" }}>
+                            <TextField
+                                fullwidth
+                                label="제목"
+                                value={newEventTitle}
+                                onChange={(e) => {
+                                    setNewEventTitle(e.target.value);
+                                }}
+                                style={{ marginTop: '16px' }}
+                            />
+                        </Box>
+                        <Box sx={{ display: "grid" }}>
+                            <TextField
+                                fullwidth
+                                label="내용"
+                                value={newEventDescription}
+                                onChange={(e) => {
+                                    setNewEventDescription(e.target.value);
+                                }}
+                                style={{ marginTop: '16px' }}
+                                multiline  // TextField를 textarea로 변경
+                                rows={4}   // 표시할 줄 수 (필요에 따라 조정 가능)
+                            />
+                        </Box>
+                        {/* 옵션 입력 필드 */}
+                        {newEventOptionText.map((option, index) => (
+                            <Box key={index} sx={{ display: 'flex', alignItems: 'center', marginBottom: '8px', marginTop: '14px' }}>
+                                <TextField
+                                    label={`옵션 ${index + 1}`}
+                                    value={option}
+                                    onChange={(e) => {
+                                        const updatedOptionText = [...newEventOptionText];
+                                        updatedOptionText[index] = e.target.value; // 값 변경
+                                        setNewEventOptionText(updatedOptionText);
+                                    }}
+                                    style={{ marginRight: '10px' }}
+                                />
+                                <Button variant="outlined" color="error" onClick={() => handleDeleteOptionText(index)}>
+                                    삭제
+                                </Button>
+                            </Box>
+                        ))}
+                        <Button variant="outlined" onClick={handleAddOptionText}>
+                            옵션 추가
+                        </Button>
+
+                        {/* 저장 및 취소 버튼 */}
+                        <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 3 }}>
+                            <Button variant="outlined" onClick={handleSaveEvent}>
+                                저장
+                            </Button>
+                            <Button variant="outlined" onClick={handleClose} sx={{ ml: 2 }}>
+                                취소
+                            </Button>
+                        </Box>
+                    </Box>
+                </Modal>
 
         {/* 모달 */}
         <Modal
