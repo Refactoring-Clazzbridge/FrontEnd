@@ -541,6 +541,7 @@ const Vote = () => {
                         backgroundColor: "#34495e",
                         color: "white",
                         fontWeight: 600,
+                        border: "none",
                       }}
                     >
                       투표하기

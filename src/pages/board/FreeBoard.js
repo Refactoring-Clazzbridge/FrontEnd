@@ -78,7 +78,7 @@ export default function FreeBoard() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-    }, 200); // 300ms 디바운스
+    }, 300); // 300ms 디바운스
 
     return () => clearTimeout(timer);
   }, [search]);

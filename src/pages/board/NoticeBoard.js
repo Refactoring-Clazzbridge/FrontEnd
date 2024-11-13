@@ -92,7 +92,7 @@ export default function NoticeBoard() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-    }, 200); // 300ms 디바운스
+    }, 300); // 300ms 디바운스
 
     return () => clearTimeout(timer);
   }, [search]);
@@ -125,6 +125,7 @@ export default function NoticeBoard() {
 
   const fetchData = useCallback(async () => {
     const data = await getUserCourseNotifications(); // API 호출
+    console.log(data, "data");
     setOriginalRows(data); // 원본 데이터 저장
     setFilteredRows(data); // 필터링된 데이터 초기화
   }, []);
