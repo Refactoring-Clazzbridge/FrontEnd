@@ -7,6 +7,8 @@ import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import Select from "@mui/material/Select";
+import SearchIcon from "@mui/icons-material/Search";
+import InputAdornment from "@mui/material/InputAdornment";
 import {
   Box,
   Button,
@@ -15,6 +17,8 @@ import {
   Typography,
   Snackbar,
   Alert,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import Tooltip from "@mui/material/Tooltip";
 import CustomModal from "../common/CustomModal";
@@ -26,6 +30,8 @@ import { getCourseAllPosts } from "../../services/apis/post/get";
 import { getAllCourse } from "../../services/apis/course/get";
 import { getCourseIdForUser } from "../../services/apis/course/get";
 import PostComment from "../comment/PostComment";
+import Spinner from "../../components/common/Spinner";
+import "../../styles/post.css";
 
 const columns = (isAdmin) => [
   { field: "id", headerName: "No", flex: 0.5, resizable: false },
@@ -59,7 +65,7 @@ const columns = (isAdmin) => [
           display: "inline",
         }}
       >
-        {params.value}
+        {params.row.courseId ? params.value : "전체공지"}
       </Box>
     ),
   },
@@ -86,7 +92,8 @@ const columns = (isAdmin) => [
 export default function FreeBoardData() {
   const [currentUser, setCurrentUser] = useState(null);
   const [userCourseId, setUserCourseId] = useState(null);
-  const [rows, setRows] = useState([]); // 상태 추가
+  const [originalRows, setOriginalRows] = useState([]); // 원본 데이터 보존
+  const [filteredRows, setFilteredRows] = useState([]); // 필터링된 데이터
   const [openDrawer, setOpenDrawer] = useState(false); // Drawer 열기 상태
   const [selectedRow, setSelectedRow] = useState(null); // 선택된 행 데이터
   const [openSuccessSnackbar, setOpenSuccessSnackbar] = useState(false); // Snackbar 열기 상태
@@ -94,11 +101,66 @@ export default function FreeBoardData() {
   const [openErrorSnackbar, setOpenErrorSnackbar] = useState(false); // Snackbar 열기 상태
   const [errorMessage, setErrorMessage] = useState("");
   const [courseId, setCourseId] = useState(""); // 강의 ID 상태 추가
+  const [loading, setLoading] = useState(true);
 
   const [originalRow, setOriginalRow] = useState(null);
   const [courses, setCourses] = useState([]);
   const [boardTypes, setBoardTypes] = useState([]); // 카테고리 상태
   const [boardId, setBoardId] = useState(""); // 선택된 카테고리 ID 상태
+  const [selectedTab, setSelectedTab] = useState("all"); // 탭 상태 추가
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 200); // 300ms 디바운스
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // 검색 처리 함수
+  const handleSearch = (event) => {
+    setSearch(event.target.value);
+  };
+
+  // 탭 변경 핸들러
+  const handleTabChange = (event, newValue) => {
+    setSelectedTab(newValue);
+  };
+
+  // 검색과 탭 필터링을 결합한 필터링 로직
+  useEffect(() => {
+    if (!debouncedSearch.trim() && selectedTab === "all") {
+      setFilteredRows(originalRows);
+      return;
+    }
+
+    let filtered = [...originalRows];
+
+    // 탭 필터링
+    if (selectedTab !== "all") {
+      filtered = filtered.filter((row) => row.boardType === selectedTab);
+    }
+
+    // 검색어 필터링
+    if (debouncedSearch.trim()) {
+      const normalizedSearch = debouncedSearch
+        .replace(/\s+/g, "")
+        .toLowerCase();
+      filtered = filtered.filter((row) => {
+        return Object.values(row).some((field) => {
+          if (field == null) return false;
+          const normalizedField = String(field)
+            .replace(/\s+/g, "")
+            .toLowerCase();
+          return normalizedField.includes(normalizedSearch);
+        });
+      });
+    }
+
+    setFilteredRows(filtered);
+  }, [debouncedSearch, originalRows, selectedTab]);
 
   const fetchData = useCallback(async () => {
     if (currentUser && currentUser.member) {
@@ -108,28 +170,27 @@ export default function FreeBoardData() {
           ...post,
           courseTitle: post.courseTitle || "전체",
         }));
-        setRows(updatedData);
+        setOriginalRows(updatedData);
       } else if (
         currentUser.member.memberType === "ROLE_STUDENT" ||
         currentUser.member.memberType === "ROLE_TEACHER"
       ) {
         const userCourseId = await getCourseIdForUser();
         setUserCourseId(userCourseId);
-        console.log(userCourseId, "userCourseId");
         const data = await getCourseAllPosts(userCourseId); // courseId에 따라 게시물 가져오기
         const updatedData = data.map((post) => ({
           ...post,
         }));
-        setRows(updatedData);
+        setOriginalRows(updatedData);
       }
     }
+    setLoading(false);
   }, [currentUser]);
 
   const fetchBoardTypes = useCallback(async () => {
     try {
       const data = await getBoardType(); // API 호출
       setBoardTypes(data); // 카테고리 데이터 상태에 저장
-      console.log(data);
     } catch (error) {
       console.error("Failed to fetch board types:", error);
     }
@@ -139,7 +200,6 @@ export default function FreeBoardData() {
     try {
       const data = await getAllCourse();
       setCourses([{ id: 0, title: "전체" }, ...data]);
-      console.log("강의 데이터 =", data);
     } catch (error) {
       console.error("강의 데이터를 가져오는 데 오류가 발생했습니다:", error);
     }
@@ -215,7 +275,6 @@ export default function FreeBoardData() {
       setBoardId("");
       setContent("");
     } catch (error) {
-      console.log(error, "updateError");
       switch (error.response.status) {
         case 400:
           setErrorMessage("게시글의 제목은 필수 입력 사항입니다.");
@@ -257,7 +316,6 @@ export default function FreeBoardData() {
 
   const postSave = async () => {
     try {
-      console.log(postForm, "postFormzzz");
       await savePost(postForm);
       setSuccessMessage("게시물이 성공적으로 저장되었습니다."); // 메시지 설정
       setOpenSuccessSnackbar(true); // Snackbar 열기
@@ -299,7 +357,6 @@ export default function FreeBoardData() {
       closeDeleteModal();
       setOpenDrawer(false);
     } catch (error) {
-      console.log(error, "deleteError");
       switch (error.response.status) {
         case 401:
           setErrorMessage("삭제 권한이 없습니다.");
@@ -316,9 +373,6 @@ export default function FreeBoardData() {
   const handleRowClick = (params) => {
     setSelectedRow(params.row); // 클릭된 행 데이터 저장
     setOpenDrawer(true); // Drawer 열기
-
-    console.log(currentUser.member.id, "currentUserId");
-    console.log(params.row, "selectdRow");
   };
 
   const handleCloseDrawer = () => {
@@ -336,16 +390,64 @@ export default function FreeBoardData() {
 
   return (
     <>
+      <Spinner visible={loading} />
+      <TextField
+        className="searchBar"
+        size="small"
+        placeholder="검색어를 입력하세요..."
+        value={search}
+        onChange={handleSearch}
+        sx={{ width: "300px", marginBottom: "16px" }}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon />
+            </InputAdornment>
+          ),
+        }}
+      />
       <Box
         sx={{
           display: "flex",
-          justifyContent: "flex-end",
+          justifyContent: "space-between",
           width: "100%",
           height: "40px",
           gap: "12px",
           marginBottom: 2,
+          alignItems: "center",
         }}
       >
+        {/* 내비바 시작 */}
+        <Tabs
+          value={selectedTab}
+          onChange={handleTabChange}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{
+            "& .MuiTab-root": {
+              textTransform: "none",
+              minWidth: "auto",
+              padding: "8px 16px",
+              fontSize: "14px",
+              // fontWeight: selectedTab === "all" ? "bold" : "normal",
+              color: "#666",
+              "&.Mui-selected": {
+                color: "#34495e",
+                fontWeight: "bold",
+              },
+            },
+            "& .MuiTabs-indicator": {
+              backgroundColor: "#34495e",
+            },
+          }}
+        >
+          <Tab label="전체" value="all" />
+          {boardTypes.map((type) => (
+            <Tab key={type.id} label={type.type} value={type.type} />
+          ))}
+        </Tabs>
+        {/* 내비바 끝 */}
+
         <Tooltip title="작성하기">
           <Button
             variant="outlined"
@@ -657,7 +759,10 @@ export default function FreeBoardData() {
               border: "none",
             },
           }}
-          rows={rows}
+          rows={filteredRows}
+          getRowClassName={(params) =>
+            params.row.courseId ? "" : "allNoticePost"
+          }
           checkboxSelection={currentUser?.member?.memberType === "ROLE_ADMIN"}
           onRowClick={handleRowClick}
           localeText={{
