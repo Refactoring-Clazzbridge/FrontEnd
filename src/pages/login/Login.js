@@ -29,6 +29,8 @@ function Login() {
       const token = localStorage.getItem("token");
       const refreshToken = Cookies.get("refreshToken");
 
+      socket.emit("fetchData", token);
+
       console.log(token);
 
       if (token && isTokenValid(token)) {
@@ -41,7 +43,7 @@ function Login() {
         try {
 
           const response = await axios.post(
-            "http://localhost:8080/api/auth/refresh",
+            "http://default-back-service-e27ef-100126159-b0eb9aec7a73.kr.lb.naverncp.com:8080/api/auth/refresh",
             {
               value: refreshToken,
             },

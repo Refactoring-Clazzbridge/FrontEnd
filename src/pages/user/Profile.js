@@ -150,7 +150,6 @@ const ProfileForm = () => {
             });
     }
 
-
     return (
         <Container component="main" maxWidth="lg" sx={{ mt: 4 }}>
             <CustomSnackbar
