@@ -391,6 +391,21 @@ export default function FreeBoardData() {
   return (
     <>
       <Spinner visible={loading} />
+      <TextField
+        className="searchBar"
+        size="small"
+        placeholder="검색어를 입력하세요..."
+        value={search}
+        onChange={handleSearch}
+        sx={{ width: "300px", marginBottom: "16px" }}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon />
+            </InputAdornment>
+          ),
+        }}
+      />
       <Box
         sx={{
           display: "flex",
@@ -432,22 +447,6 @@ export default function FreeBoardData() {
           ))}
         </Tabs>
         {/* 내비바 끝 */}
-
-        <TextField
-          className="searchBar"
-          size="small"
-          placeholder="검색어를 입력하세요..."
-          value={search}
-          onChange={handleSearch}
-          sx={{ width: "300px" }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
 
         <Tooltip title="작성하기">
           <Button
