@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import {
-  Button,
-  Modal,
-  Typography,
-  TextField,
-  Box,
-  Radio,
-  RadioGroup,
-  FormControlLabel,
+    Button,
+    Modal,
+    Typography,
+    TextField,
+    Box,
+    Radio,
+    RadioGroup,
+    FormControlLabel,
 } from "@mui/material";
 import moment from "moment";
 import { LocalizationProvider, DateTimePicker } from "@mui/x-date-pickers";
@@ -483,7 +483,7 @@ const Vote = () => {
                             },
                         }}
                         pageSizeOptions={[10]}
-                        checkboxSelection={role !== 'ROLE_STUDENT' } // 행 선택을 위한 체크박스 추가
+                        checkboxSelection={role !== 'ROLE_STUDENT'} // 행 선택을 위한 체크박스 추가
                         onRowSelectionModelChange={(newSelection) => {
                             setSelectedVotes(newSelection); // 상태 업데이트
 
@@ -733,141 +733,141 @@ const Vote = () => {
                     </Box>
                 </Modal>
 
-        {/* 모달 */}
-        <Modal
-          open={open}
-          onClose={handleClose}
-          aria-labelledby="modal-title"
-          aria-describedby="modal-description"
-        >
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              p: 4,
-              backgroundColor: "white",
-              borderRadius: "8px",
-              maxWidth: "600px",
-              margin: "auto",
-              top: "20%",
-              position: "relative",
-            }}
-          >
-            <Typography id="modal-title" variant="h6">
-              {"투표 등록"}
-            </Typography>
-
-            {/* 입력 필드 */}
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 2,
-                mt: 2,
-              }}
-            >
-              <DateTimePicker
-                label="시작 날짜"
-                value={newEventStart}
-                onChange={(newValue) => setNewEventStart(moment(newValue))}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    fullWidth
-                    style={{ marginBottom: "20px" }}
-                  />
-                )}
-              />
-              <DateTimePicker
-                label="종료 날짜"
-                value={newEventEnd}
-                onChange={(newValue) => setNewEventEnd(moment(newValue))}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    fullWidth
-                    style={{ marginBottom: "20px" }}
-                  />
-                )}
-              />
-              {dateError && (
-                <Typography color="error" variant="body2">
-                  {dateError}
-                </Typography>
-              )}
-            </Box>
-            <Box sx={{ display: "grid" }}>
-              <TextField
-                fullwidth
-                label="제목"
-                value={newEventTitle}
-                onChange={(e) => {
-                  setNewEventTitle(e.target.value);
-                }}
-                style={{ marginTop: "16px" }}
-              />
-            </Box>
-            <Box sx={{ display: "grid" }}>
-              <TextField
-                fullwidth
-                label="내용"
-                value={newEventDescription}
-                onChange={(e) => {
-                  setNewEventDescription(e.target.value);
-                }}
-                style={{ marginTop: "16px" }}
-                multiline // TextField를 textarea로 변경
-                rows={4} // 표시할 줄 수 (필요에 따라 조정 가능)
-              />
-            </Box>
-            {/* 옵션 입력 필드 */}
-            {newEventOptionText.map((option, index) => (
-              <Box
-                key={index}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  marginBottom: "8px",
-                  marginTop: "14px",
-                }}
-              >
-                <TextField
-                  label={`옵션 ${index + 1}`}
-                  value={option}
-                  onChange={(e) => {
-                    const updatedOptionText = [...newEventOptionText];
-                    updatedOptionText[index] = e.target.value; // 값 변경
-                    setNewEventOptionText(updatedOptionText);
-                  }}
-                  style={{ marginRight: "10px" }}
-                />
-                <Button
-                  variant="outlined"
-                  color="error"
-                  onClick={() => handleDeleteOptionText(index)}
+                {/* 모달 */}
+                <Modal
+                    open={open}
+                    onClose={handleClose}
+                    aria-labelledby="modal-title"
+                    aria-describedby="modal-description"
                 >
-                  삭제
-                </Button>
-              </Box>
-            ))}
-            <Button variant="outlined" onClick={handleAddOptionText}>
-              옵션 추가
-            </Button>
+                    <Box
+                        sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            p: 4,
+                            backgroundColor: "white",
+                            borderRadius: "8px",
+                            maxWidth: "600px",
+                            margin: "auto",
+                            top: "20%",
+                            position: "relative",
+                        }}
+                    >
+                        <Typography id="modal-title" variant="h6">
+                            {"투표 등록"}
+                        </Typography>
 
-            {/* 저장 및 취소 버튼 */}
-            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 3 }}>
-              <Button variant="outlined" onClick={handleSaveEvent}>
-                저장
-              </Button>
-              <Button variant="outlined" onClick={handleClose} sx={{ ml: 2 }}>
-                취소
-              </Button>
-            </Box>
-          </Box>
-        </Modal>
-      </div>
-    </LocalizationProvider>
-  );
+                        {/* 입력 필드 */}
+                        <Box
+                            sx={{
+                                display: "grid",
+                                gridTemplateColumns: "1fr 1fr",
+                                gap: 2,
+                                mt: 2,
+                            }}
+                        >
+                            <DateTimePicker
+                                label="시작 날짜"
+                                value={newEventStart}
+                                onChange={(newValue) => setNewEventStart(moment(newValue))}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        fullWidth
+                                        style={{ marginBottom: "20px" }}
+                                    />
+                                )}
+                            />
+                            <DateTimePicker
+                                label="종료 날짜"
+                                value={newEventEnd}
+                                onChange={(newValue) => setNewEventEnd(moment(newValue))}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        fullWidth
+                                        style={{ marginBottom: "20px" }}
+                                    />
+                                )}
+                            />
+                            {dateError && (
+                                <Typography color="error" variant="body2">
+                                    {dateError}
+                                </Typography>
+                            )}
+                        </Box>
+                        <Box sx={{ display: "grid" }}>
+                            <TextField
+                                fullwidth
+                                label="제목"
+                                value={newEventTitle}
+                                onChange={(e) => {
+                                    setNewEventTitle(e.target.value);
+                                }}
+                                style={{ marginTop: "16px" }}
+                            />
+                        </Box>
+                        <Box sx={{ display: "grid" }}>
+                            <TextField
+                                fullwidth
+                                label="내용"
+                                value={newEventDescription}
+                                onChange={(e) => {
+                                    setNewEventDescription(e.target.value);
+                                }}
+                                style={{ marginTop: "16px" }}
+                                multiline // TextField를 textarea로 변경
+                                rows={4} // 표시할 줄 수 (필요에 따라 조정 가능)
+                            />
+                        </Box>
+                        {/* 옵션 입력 필드 */}
+                        {newEventOptionText.map((option, index) => (
+                            <Box
+                                key={index}
+                                sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    marginBottom: "8px",
+                                    marginTop: "14px",
+                                }}
+                            >
+                                <TextField
+                                    label={`옵션 ${index + 1}`}
+                                    value={option}
+                                    onChange={(e) => {
+                                        const updatedOptionText = [...newEventOptionText];
+                                        updatedOptionText[index] = e.target.value; // 값 변경
+                                        setNewEventOptionText(updatedOptionText);
+                                    }}
+                                    style={{ marginRight: "10px" }}
+                                />
+                                <Button
+                                    variant="outlined"
+                                    color="error"
+                                    onClick={() => handleDeleteOptionText(index)}
+                                >
+                                    삭제
+                                </Button>
+                            </Box>
+                        ))}
+                        <Button variant="outlined" onClick={handleAddOptionText}>
+                            옵션 추가
+                        </Button>
+
+                        {/* 저장 및 취소 버튼 */}
+                        <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 3 }}>
+                            <Button variant="outlined" onClick={handleSaveEvent}>
+                                저장
+                            </Button>
+                            <Button variant="outlined" onClick={handleClose} sx={{ ml: 2 }}>
+                                취소
+                            </Button>
+                        </Box>
+                    </Box>
+                </Modal>
+            </div>
+        </LocalizationProvider>
+    );
 };
 
 export default Vote;
