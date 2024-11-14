@@ -590,6 +590,7 @@ const Vote = () => {
                   {voteInfo.voteOptionInfoList &&
                   voteInfo.voteOptionInfoList.length > 0 ? (
                     <RadioGroup
+                      className="voteOption"
                       value={selectedOption || ""} // 선택된 option의 voteOptionId를 설정
                       onChange={(e) => {
                         const selectedValue = Number(e.target.value); // 선택된 value (voteOptionId)를 가져옴
@@ -637,6 +638,7 @@ const Vote = () => {
                         backgroundColor: "#34495e",
                         color: "white",
                         fontWeight: 600,
+                        border: "none",
                       }}
                     >
                       투표하기
