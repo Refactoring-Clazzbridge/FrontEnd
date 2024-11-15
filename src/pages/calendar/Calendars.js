@@ -3,7 +3,6 @@ import { Calendar, momentLocalizer } from "react-big-calendar";
 import moment from "moment";
 import {
   Button,
-  Modal,
   Typography,
   TextField,
   Box,
@@ -16,6 +15,8 @@ import { LocalizationProvider, DateTimePicker } from "@mui/x-date-pickers";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
 import apiClient from "../../shared/apiClient";
+import CustomModal from "../../components/common/CustomModal";
+import "../../styles/calendar.css";
 import "moment/locale/ko"; // 한국어 로케일 불러오기
 
 moment.locale("ko");
@@ -155,6 +156,7 @@ const Calendars = ({ readOnly }) => {
 
   // 이벤트 클릭 시 이벤트 처리
   const handleSelectEvent = (event) => {
+    console.log(event, "event");
     setSelectedEvent(event);
     setNewEventcourseTitle(event.courseTitle);
     setNewEventEventTitle(event.eventTitle);
@@ -296,9 +298,9 @@ const Calendars = ({ readOnly }) => {
           messages={messages} // 여기에 메시지 객체를 추가
         />
 
-        <Modal
-          open={open}
-          onClose={handleClose}
+        <CustomModal
+          isOpen={open}
+          closeModal={handleClose}
           aria-label="model-courseTitle"
           aria-labelledby="modal-eventTitle"
           aria-describedby="modal-description"
@@ -308,8 +310,8 @@ const Calendars = ({ readOnly }) => {
               padding: "20px",
               background: "white",
               borderRadius: "8px",
-              maxWidth: "400px",
-              margin: "auto",
+              // maxWidth: "400px",
+              // margin: "auto",
               top: "15%",
               position: "relative",
             }}
@@ -318,8 +320,7 @@ const Calendars = ({ readOnly }) => {
               <>
                 <Typography
                   id="modal-eventTitle"
-                  variant="h6"
-                  style={{ marginBottom: "14px" }}
+                  style={{ marginBottom: "16px", fontWeight: 600 }}
                 >
                   {isAddingEvent ? "새 일정 추가" : "이벤트 수정"}
                 </Typography>
@@ -362,32 +363,33 @@ const Calendars = ({ readOnly }) => {
                   rows={4} // 표시할 줄 수 (필요에 따라 조정 가능)
                 />
 
-                <DateTimePicker
-                  label="시작 날짜"
-                  value={newEventStart}
-                  onChange={(newValue) => setNewEventStart(moment(newValue))}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      fullWidth
-                      style={{ marginBottom: "20px" }}
-                    />
-                  )}
-                />
-                <br />
-                <br />
-                <DateTimePicker
-                  label="종료 날짜"
-                  value={newEventEnd}
-                  onChange={(newValue) => setNewEventEnd(moment(newValue))}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      fullWidth
-                      style={{ marginBottom: "20px" }}
-                    />
-                  )}
-                />
+                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                  <DateTimePicker
+                    label="시작 날짜"
+                    value={newEventStart}
+                    onChange={(newValue) => setNewEventStart(moment(newValue))}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        fullWidth
+                        style={{ marginBottom: "20px" }}
+                      />
+                    )}
+                  />
+
+                  <DateTimePicker
+                    label="종료 날짜"
+                    value={newEventEnd}
+                    onChange={(newValue) => setNewEventEnd(moment(newValue))}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        fullWidth
+                        style={{ marginBottom: "20px" }}
+                      />
+                    )}
+                  />
+                </Box>
                 {error && (
                   <Typography
                     color="error"
@@ -404,38 +406,77 @@ const Calendars = ({ readOnly }) => {
               </>
             ) : (
               <>
-                <Typography id="modal-courseTitle" variant="h6">
-                  {selectedEvent ? selectedEvent.courseTitle : ""}
-                </Typography>
-                <Typography id="modal-eventTitle" variant="h6">
-                  {selectedEvent ? selectedEvent.eventTitle : ""}
-                </Typography>
-                <Typography
-                  id="modal-description"
-                  style={{
-                    whiteSpace: "pre-wrap", // 연속된 띄어쓰기 및 줄바꿈 모두 허용
-                    overflow: "hidden", // 넘치는 내용 숨기기
-                    textOverflow: "ellipsis", // 넘치는 내용에 ... 표시
-                    display: "block", // 블록 요소로 설정
-                    maxHeight: "200px", // 최대 높이 설정 (원하는 높이로 조정 가능)
-                    overflowY: "auto", // 세로 방향 스크롤
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    borderBottom: "1px solid #f6f8fa",
+                    paddingBottom: "4px",
+                    marginBottom: "2px",
                   }}
                 >
-                  {selectedEvent ? selectedEvent.description : ""}
-                </Typography>
+                  <Typography id="modal-eventTitle" sx={{ fontWeight: 600 }}>
+                    {selectedEvent ? selectedEvent.eventTitle : ""}
+                  </Typography>
 
-                <Typography>
-                  시작 시간:{" "}
-                  {selectedEvent
-                    ? moment(selectedEvent.start).format("YYYY.MM.DD HH:mm")
-                    : ""}
-                </Typography>
-                <Typography>
-                  종료 시간:{" "}
-                  {selectedEvent
-                    ? moment(selectedEvent.end).format("YYYY.MM.DD HH:mm")
-                    : ""}
-                </Typography>
+                  <Typography
+                    id="modal-courseTitle"
+                    sx={{
+                      fontSize: "12px",
+                      color: "darkgray",
+                    }}
+                  >
+                    {selectedEvent ? selectedEvent.courseTitle : ""}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{ display: "flex", gap: "4px" }}
+                  className="calendarModalDate"
+                >
+                  <Typography>
+                    {" "}
+                    {selectedEvent
+                      ? moment(selectedEvent.start).format(
+                          "YYYY년 MM월 DD일(ddd) HH:mm"
+                        )
+                      : ""}
+                  </Typography>
+                  <Typography sx={{ display: "inline", margin: "0px 2px" }}>
+                    ~
+                  </Typography>
+                  <Typography>
+                    {" "}
+                    {selectedEvent
+                      ? moment(selectedEvent.end).format(
+                          "YYYY년 MM월 DD일(ddd) HH:mm"
+                        )
+                      : ""}
+                  </Typography>
+                </Box>
+
+                <Box
+                  sx={{
+                    marginTop: 2,
+                    minHeight: "80px",
+                  }}
+                >
+                  <Typography
+                    id="modal-description"
+                    style={{
+                      fontSize: "14px",
+                      whiteSpace: "pre-wrap", // 연속된 띄어쓰기 및 줄바꿈 모두 허용
+                      overflow: "hidden", // 넘치는 내용 숨기기
+                      textOverflow: "ellipsis", // 넘치는 내용에 ... 표시
+                      display: "block", // 블록 요소로 설정
+                      maxHeight: "200px", // 최대 높이 설정 (원하는 높이로 조정 가능)
+                      overflowY: "auto", // 세로 방향 스크롤
+                    }}
+                  >
+                    {selectedEvent ? selectedEvent.description : ""}
+                  </Typography>
+                </Box>
 
                 {!readOnly && role === "ROLE_ADMIN" ? (
                   <div style={{ marginTop: "20px" }}>
@@ -455,6 +496,7 @@ const Calendars = ({ readOnly }) => {
                 )}
               </>
             )}
+
             <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
               {editMode && (
                 <Button
@@ -470,7 +512,7 @@ const Calendars = ({ readOnly }) => {
               </Button>
             </Box>
           </div>
-        </Modal>
+        </CustomModal>
       </div>
     </LocalizationProvider>
   );

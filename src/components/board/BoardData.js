@@ -114,7 +114,7 @@ export default function FreeBoardData() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-    }, 200); // 300ms 디바운스
+    }, 300); // 300ms 디바운스
 
     return () => clearTimeout(timer);
   }, [search]);
@@ -132,11 +132,13 @@ export default function FreeBoardData() {
   // 검색과 탭 필터링을 결합한 필터링 로직
   useEffect(() => {
     if (!debouncedSearch.trim() && selectedTab === "all") {
+      console.log(selectedTab, "tab");
       setFilteredRows(originalRows);
       return;
     }
 
     let filtered = [...originalRows];
+    console.log(originalRows, " ===========");
 
     // 탭 필터링
     if (selectedTab !== "all") {
@@ -448,26 +450,28 @@ export default function FreeBoardData() {
         </Tabs>
         {/* 내비바 끝 */}
 
-        <Tooltip title="작성하기">
-          <Button
-            variant="outlined"
-            sx={{ width: "38px", height: "38px" }}
-            onClick={openModal}
-          >
-            <PostAddIcon /> {/* 아이콘만 표시 */}
-          </Button>
-        </Tooltip>
-        {currentUser?.member?.memberType === "ROLE_ADMIN" && (
-          <Tooltip title="삭제하기">
+        <Box sx={{ display: "flex", gap: "10px" }}>
+          <Tooltip title="작성하기">
             <Button
               variant="outlined"
               sx={{ width: "38px", height: "38px" }}
-              onClick={openDeleteModal}
+              onClick={openModal}
             >
-              <DeleteOutlineIcon />
+              <PostAddIcon /> {/* 아이콘만 표시 */}
             </Button>
           </Tooltip>
-        )}
+          {currentUser?.member?.memberType === "ROLE_ADMIN" && (
+            <Tooltip title="삭제하기">
+              <Button
+                variant="outlined"
+                sx={{ width: "38px", height: "38px" }}
+                onClick={openDeleteModal}
+              >
+                <DeleteOutlineIcon />
+              </Button>
+            </Tooltip>
+          )}
+        </Box>
       </Box>
       {/* ========== 삭제 ========= */}
       <CustomModal isOpen={isDeleteModalOpen} closeModal={closeDeleteModal}>
@@ -804,7 +808,7 @@ export default function FreeBoardData() {
             columnMenuManageColumns: "관리", // "Manage" 텍스트 변경
             // 페이지 관련 텍스트 변경
             page: "페이지",
-            noRowsLabel: "데이터가 없습니다.",
+            noRowsLabel: "게시글이 없습니다.",
             noResultsOverlayLabel: "결과가 없습니다.",
             errorOverlayDefaultLabel: "오류가 발생했습니다.",
             // 페이지네이션 관련 텍스트
