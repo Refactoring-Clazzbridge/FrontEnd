@@ -630,7 +630,6 @@ const MemberManager = () => {
                                 label="강의명"
                                 value={newEventTitle}
                                 onChange={(e) => setNewEventTitle(e.target.value)}
-                                disabled={newEventType === "ROLE_TEACHER"}
                             >
                                 {courseOption.map((course, index) => (
                                     <MenuItem key={index} value={course.courseTitle}>
