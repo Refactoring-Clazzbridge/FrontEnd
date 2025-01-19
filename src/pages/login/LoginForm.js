@@ -10,17 +10,21 @@ import {
   CircularProgress,
   Typography,
 } from "@mui/material";
-import { UserContext } from "../../context/UserContext";
-import apiClient from "../../shared/apiClient"; // default로 가져오기
+import {useUser} from "../../context/UserContext";
+import apiClient from "../../shared/apiClient";
+import {useToken} from "../../context/TokenContext";
+import {useLogin} from "../../context/LoginContext"; // default로 가져오기
 
-function LoginForm({ onLoginSuccess }) {
-  const [memberId, setmemberId] = useState("");
+function LoginForm() {
+  const [memberId, setMemberId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSeatRegistered, setIsSeatRegistered] = useState(false); // 좌석 등록 여부 상태
   const [seatData, setSeatData] = useState(null); // 좌석 정보 상태
-  const { setUserInfo, addCourseIdToUserInfo } = useContext(UserContext); // addCourseIdToUserInfo 사용 가능
+  const { updateUserInfo } = useUser() // addCourseIdToUserInfo 사용 가능
+  const { token, updateToken } = useToken(); // setToken 사용 가능
+  const { handleLoginSuccess } = useLogin(); // handleLoginSuccess 사용 가능
 
   const minLength = 8;
 
@@ -35,33 +39,23 @@ function LoginForm({ onLoginSuccess }) {
     setLoading(true);
 
     try {
-      console.log("1111=============>test");
-      console.log(memberId, password);
-      const response = await axios.post("http://175.106.99.175:8080/api/login", {
+      const response = await axios.post(process.env.REACT_APP_API_URL+"login", {
         memberId,
         password,
       });
-      console.log("2222=============>");
-      console.log(response);
 
       if (response.data) {
-        localStorage.setItem("token", response.data.accessToken);
+        updateToken(response.data.accessToken);
         const { authResponseDTO: member } = response.data;
+        updateUserInfo({ member });
 
-        setUserInfo({ member });
-        console.log(member);
-        localStorage.setItem("userInfo", JSON.stringify({ member })); // 로컬 스토리지에 저장
-        localStorage.setItem("userId", member.id); // 로컬 스토리지에 저장
-        localStorage.setItem("membertype", member.memberType); // 로컬 스토리지에 저장
-
-        console.log(
-          "response.data.refreshToken: " + response.data.refreshTokenCookie
-        );
+        // console.log(
+        //   "response.data.refreshToken: " + response.data.refreshTokenCookie
+        // );
         document.cookie = `refreshToken=${response.data.refreshTokenCookie.value}; path=/;`;
 
         await fetchSeatInfo(member.id); // 로그인 성공 후 좌석 정보를 가져오는 로직 추가
-
-        onLoginSuccess(memberId);
+        await handleLoginSuccess();
         setError("");
       } else {
         setError("아이디 또는 비밀번호가 올바르지 않습니다.");
@@ -79,11 +73,11 @@ function LoginForm({ onLoginSuccess }) {
     try {
       const seatResponse = await apiClient.get(`/seat/status/${memberId}`);
 
-      console.log(seatResponse);
+      // console.log(seatResponse);
 
       if (seatResponse.data) {
         const seatInfo = seatResponse.data;
-        console.log("좌석 정보 가져오기 성공:", seatInfo);
+        // console.log("좌석 정보 가져오기 성공:", seatInfo);
 
         localStorage.setItem("seatInfo", JSON.stringify(seatInfo));
 
@@ -122,7 +116,7 @@ function LoginForm({ onLoginSuccess }) {
             autoComplete="memberId"
             autoFocus
             value={memberId}
-            onChange={(e) => setmemberId(e.target.value)}
+            onChange={(e) => setMemberId(e.target.value)}
             sx={{
               "& .css-1a7v3y2-MuiInputBase-input-MuiFilledInput-input": {
                 backgroundColor: "white",

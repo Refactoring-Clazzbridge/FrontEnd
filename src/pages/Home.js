@@ -103,9 +103,8 @@ const Home = () => {
                 }
 
                 // API 요청 보내기
-                const role = localStorage.getItem('membertype');
+                const role = userInfo.member.role;
                 setName(userInfo.member.name);
-
 
                 if (role !== "ROLE_ADMIN" && userInfo) {
                     const response = await apiClient.get(`user/check/${userInfo.member.id}`);

@@ -26,7 +26,7 @@ import {
   getCourseId,
   getTeacherByCourseId,
 } from "../../services/apis/studentCourse/get";
-import socket from "../../utils/socket";
+import socket from "../../config/socket";
 
 function ProfileCard({
   seatId,
@@ -159,13 +159,13 @@ function ProfileCard({
         >
           <Typography
             sx={{
-              fontSize: "12px",
+              fontSize: "15px",
               fontWeight: "500",
               color: isGoodOnline ? "#333" : "#b0b0b0",
               margin: "8px",
             }}
           >
-            {`${seatNumber}`}
+            {`No. ${seatNumber}`}
           </Typography>
         </div>
         <Stack

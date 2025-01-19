@@ -22,7 +22,6 @@ import { deleteQuestionsApi } from "../../services/apis/question/delete";
 import { getQuestionsByCourseId } from "../../services/apis/question/get";
 import { updateQuestionApi } from "../../services/apis/question/put";
 import { toggleQuestionRecommendApi } from "../../services/apis/question/put";
-import { UserContext } from "../../context/UserContext";
 import { getAnswersByQuestionIdApi } from "../../services/apis/answer/get";
 import { saveAnswerApi } from "../../services/apis/answer/post";
 import { updateAnswerApi } from "../../services/apis/answer/put";
@@ -34,10 +33,11 @@ import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import { formatDistanceToNow } from "date-fns";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import { ko } from "date-fns/locale";
+import {useUser} from "../../context/UserContext";
 
 export default function QuestionBoard() {
   // 상태 관리
-  const { userInfo } = useContext(UserContext);
+  const { userInfo } = useUser();
   const [rows, setRows] = useState([]);
   const [openDrawer, setOpenDrawer] = useState(false);
   const [selectedRow, setSelectedRow] = useState(null);

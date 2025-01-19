@@ -4,10 +4,8 @@ import { DataGrid } from '@mui/x-data-grid'; // DataGrid 임포트
 import apiClient from '../../shared/apiClient';
 import { v4 as uuidv4 } from 'uuid'; // 고유한 ID를 생성하기 위해 uuid 패키지 사용
 import CustomSnackbar from "../../components/common/CustomSnackbar"; // 커스텀 스낵바
-import CustomModal from "../../components/common/CustomModal"; // 커스텀 모달
 
 const ClassroomManager = () => {
-    const [openModal, setOpenModal] = useState(false);
     const [open, setOpen] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState(null);
@@ -138,36 +136,38 @@ const ClassroomManager = () => {
         }
     };
 
-    const handleDeleteConfirmation = () => {
-        const deletePromises = selectedClassrooms.map(id => apiClient.delete(`classroom/${id}`));
-
-        Promise.all(deletePromises)
-            .then(() => {
-                const updatedEvents = events.filter(event => !selectedClassrooms.includes(event.id));
-                setEvents(updatedEvents);
-                setSelectedClassrooms([]); // 삭제 후 선택된 강의실 목록 초기화
-                setSnackbarMessage(`${selectedClassrooms.length}개 강의실 삭제 성공`);
-                setSnackbarSeverity("success");
-                setOpenSnackbar(true);
-            })
-            .catch(error => {
-                console.error('강의실 정보를 삭제하지 못했습니다.', error.response.data);
-                setSnackbarMessage('강의실 삭제 실패: ' + error.response.data.message);
-                setSnackbarSeverity("error");
-                setOpenSnackbar(true);
-            });
-        setOpenModal(false); // 모달 닫기
-    };
-
     // 강의실 삭제 핸들러
     const deleteSelectedClassrooms = () => {
+        console.log(selectedClassrooms);
         if (selectedClassrooms.length === 0) {
             setSnackbarMessage("삭제할 강의실을 선택하세요");
             setSnackbarSeverity("error");
             setOpenSnackbar(true);
             return;
         }
-        setOpenModal(true); // 모달 열기
+
+        // 선택된 강의실 ID 목록을 콘솔로 확인
+        console.log('삭제할 강의실 ID 목록:', selectedClassrooms);
+
+        const confirmation = window.confirm(`선택된 강의실 ${selectedClassrooms.length}개를 삭제하시겠습니까?`);
+
+        if (confirmation) {
+            const deletePromises = selectedClassrooms.map(id => apiClient.delete(`classroom/${id}`));
+
+            Promise.all(deletePromises)
+                .then(() => {
+                    const updatedEvents = events.filter(event => !selectedClassrooms.includes(event.id));
+                    setEvents(updatedEvents);
+                    setSelectedClassrooms([]); // 삭제 후 선택된 강의실 목록 초기화
+                    setSnackbarMessage(`${selectedClassrooms.length}개 강의실 삭제 성공`);
+                    setSnackbarSeverity("success");
+                    setOpenSnackbar(true);
+                })
+                .catch(error => {
+                    console.error('강의실 정보를 삭제하지 못했습니다.', error.response.data);
+                    alert('강의실 삭제 실패: ' + error.response.data.message);
+                });
+        }
     };
 
 
@@ -310,65 +310,9 @@ const ClassroomManager = () => {
                 <Button variant="outlined" onClick={editSelectedClassroom} sx={{ mr: 2 }}>
                     강의실 수정
                 </Button>
-                <div>
-                    <Button variant="outlined" onClick={deleteSelectedClassrooms} sx={{ mr: 2 }}>
-                        강의실 삭제
-                    </Button>
-
-                    {/* Custom Modal */}
-                    <CustomModal isOpen={openModal} closeModal={() => setOpenModal(false)}>
-                        <Box
-                            sx={{
-                                display: "flex",
-                                margin: "auto",
-                                width: "100%",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                flexDirection: "column",
-                                gap: "10px",
-                            }}
-                        >
-                            <h3>강의실 삭제</h3>
-                            <p>선택된 강의실 {selectedClassrooms.length}개를 삭제하시겠습니까?</p>
-                            <Box
-                                sx={{
-                                    display: "flex",
-                                    width: "100%",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    flexDirection: "row",
-                                    gap: "24px",
-                                    margin: "16px 0",
-                                }}
-                            >
-                                <Button
-                                    variant="outlined"
-                                    onClick={() => setOpenModal(false)}
-                                    sx={{
-                                        width: "120px",
-                                        height: "40px",
-                                        borderColor: "#34495e",
-                                        color: "#34495e",
-                                    }}
-                                >
-                                    취소
-                                </Button>
-                                <Button
-                                    variant="contained"
-                                    onClick={handleDeleteConfirmation}
-                                    sx={{
-                                        width: "120px",
-                                        height: "40px",
-                                        backgroundColor: "#34495e",
-                                        fontWeight: 600,
-                                    }}
-                                >
-                                    삭제
-                                </Button>
-                            </Box>
-                        </Box>
-                    </CustomModal>
-                </div>
+                <Button variant="outlined" onClick={deleteSelectedClassrooms}>
+                    강의실 삭제
+                </Button>
             </Box>
 
             {/* 모달 */}
@@ -415,10 +359,10 @@ const ClassroomManager = () => {
 
                     {/* 저장 및 취소 버튼 */}
                     <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 3 }}>
-                        <Button variant="outlined" onClick={handleSaveEvent}>
+                        <Button variant="outlined" color="primary" onClick={handleSaveEvent}>
                             저장
                         </Button>
-                        <Button variant="outlined" onClick={handleClose} sx={{ ml: 2 }}>
+                        <Button variant="outlined" color="secondary" onClick={handleClose} sx={{ ml: 2 }}>
                             취소
                         </Button>
                     </Box>

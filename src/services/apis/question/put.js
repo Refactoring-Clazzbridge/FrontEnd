@@ -23,13 +23,13 @@ export const updateQuestionApi = async (data) => {
 // 기존 updateQuestionApi는 유지하고 아래 함수 추가
 export const toggleQuestionRecommendApi = async (
   questionId,
-  currentRecommended
+  currentRecommended,
 ) => {
   try {
     console.log(
       "Sending request with questionId and isRecommended:",
       questionId,
-      !currentRecommended // 현재 상태의 반대값 전송
+      !currentRecommended, // 현재 상태의 반대값 전송
     );
     const response = await apiClient.put(`qnas/questions/recommended`, {
       id: questionId,

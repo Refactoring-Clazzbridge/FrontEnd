@@ -242,10 +242,9 @@ export default function AssignmentItem({
                             fontSize: "12px",
                             color: "gray",
                             marginLeft: "8px",
-                            fontWeight: 500,
                           }}
                         >
-                          {assignment.courseName}
+                          ({assignment.courseName})
                         </span>
                       )}
                   </Typography>

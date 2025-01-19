@@ -3,6 +3,7 @@ import { Calendar, momentLocalizer } from "react-big-calendar";
 import moment from "moment";
 import {
   Button,
+  Modal,
   Typography,
   TextField,
   Box,
@@ -15,9 +16,9 @@ import { LocalizationProvider, DateTimePicker } from "@mui/x-date-pickers";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
 import apiClient from "../../shared/apiClient";
-import CustomModal from "../../components/common/CustomModal";
-import "../../styles/calendar.css";
-import "moment/locale/ko"; // 한국어 로케일 불러오기
+import "moment/locale/ko";
+import {useToken} from "../../context/TokenContext";
+import {useUser} from "../../context/UserContext"; // 한국어 로케일 불러오기
 
 moment.locale("ko");
 
@@ -64,20 +65,24 @@ const Calendars = ({ readOnly }) => {
   // course 상태
   const [course, setCourse] = useState("");
 
+  const {token} = useToken();
+  const {userInfo} = useUser();
+
   useEffect(() => {
     // 페이지가 처음 로드될 때 API에서 데이터를 가져옵니다.
     fetchEvents();
     fetchcourses();
+
     const fetchRole = async () => {
       try {
-        const token = localStorage.getItem("token"); // localStorage에서 token 가져오기
-        const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+        // const token = localStorage.getItem("token"); // localStorage에서 token 가져오기
+        // const userInfo = JSON.parse(localStorage.getItem("userInfo"));
         if (!token) {
           console.log("No token found in localStorage");
           return;
         }
         // API 요청 보내기
-        const role = localStorage.getItem("membertype");
+        const role = userInfo.memberType;
 
         if (role !== "ROLE_ADMIN") {
           apiClient
@@ -109,6 +114,7 @@ const Calendars = ({ readOnly }) => {
           start: moment(event.startDate, "YYYY-MM-DD HH:mm").toDate(),
           end: moment(event.endDate, "YYYY-MM-DD HH:mm").toDate(),
         }));
+        console.log(fetchedEvents);
         setEvents(fetchedEvents); // 3. 상태 업데이트
       })
       .catch((error) => {
@@ -156,7 +162,6 @@ const Calendars = ({ readOnly }) => {
 
   // 이벤트 클릭 시 이벤트 처리
   const handleSelectEvent = (event) => {
-    console.log(event, "event");
     setSelectedEvent(event);
     setNewEventcourseTitle(event.courseTitle);
     setNewEventEventTitle(event.eventTitle);
@@ -298,9 +303,9 @@ const Calendars = ({ readOnly }) => {
           messages={messages} // 여기에 메시지 객체를 추가
         />
 
-        <CustomModal
-          isOpen={open}
-          closeModal={handleClose}
+        <Modal
+          open={open}
+          onClose={handleClose}
           aria-label="model-courseTitle"
           aria-labelledby="modal-eventTitle"
           aria-describedby="modal-description"
@@ -310,8 +315,8 @@ const Calendars = ({ readOnly }) => {
               padding: "20px",
               background: "white",
               borderRadius: "8px",
-              // maxWidth: "400px",
-              // margin: "auto",
+              maxWidth: "400px",
+              margin: "auto",
               top: "15%",
               position: "relative",
             }}
@@ -320,7 +325,8 @@ const Calendars = ({ readOnly }) => {
               <>
                 <Typography
                   id="modal-eventTitle"
-                  style={{ marginBottom: "16px", fontWeight: 600 }}
+                  variant="h6"
+                  style={{ marginBottom: "14px" }}
                 >
                   {isAddingEvent ? "새 일정 추가" : "이벤트 수정"}
                 </Typography>
@@ -363,33 +369,32 @@ const Calendars = ({ readOnly }) => {
                   rows={4} // 표시할 줄 수 (필요에 따라 조정 가능)
                 />
 
-                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                  <DateTimePicker
-                    label="시작 날짜"
-                    value={newEventStart}
-                    onChange={(newValue) => setNewEventStart(moment(newValue))}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        fullWidth
-                        style={{ marginBottom: "20px" }}
-                      />
-                    )}
-                  />
-
-                  <DateTimePicker
-                    label="종료 날짜"
-                    value={newEventEnd}
-                    onChange={(newValue) => setNewEventEnd(moment(newValue))}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        fullWidth
-                        style={{ marginBottom: "20px" }}
-                      />
-                    )}
-                  />
-                </Box>
+                <DateTimePicker
+                  label="시작 날짜"
+                  value={newEventStart}
+                  onChange={(newValue) => setNewEventStart(moment(newValue))}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      fullWidth
+                      style={{ marginBottom: "20px" }}
+                    />
+                  )}
+                />
+                <br />
+                <br />
+                <DateTimePicker
+                  label="종료 날짜"
+                  value={newEventEnd}
+                  onChange={(newValue) => setNewEventEnd(moment(newValue))}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      fullWidth
+                      style={{ marginBottom: "20px" }}
+                    />
+                  )}
+                />
                 {error && (
                   <Typography
                     color="error"
@@ -406,77 +411,38 @@ const Calendars = ({ readOnly }) => {
               </>
             ) : (
               <>
-                <Box
-                  sx={{
-                    display: "flex",
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    borderBottom: "1px solid #f6f8fa",
-                    paddingBottom: "4px",
-                    marginBottom: "2px",
+                <Typography id="modal-courseTitle" variant="h6">
+                  {selectedEvent ? selectedEvent.courseTitle : ""}
+                </Typography>
+                <Typography id="modal-eventTitle" variant="h6">
+                  {selectedEvent ? selectedEvent.eventTitle : ""}
+                </Typography>
+                <Typography
+                  id="modal-description"
+                  style={{
+                    whiteSpace: "pre-wrap", // 연속된 띄어쓰기 및 줄바꿈 모두 허용
+                    overflow: "hidden", // 넘치는 내용 숨기기
+                    textOverflow: "ellipsis", // 넘치는 내용에 ... 표시
+                    display: "block", // 블록 요소로 설정
+                    maxHeight: "200px", // 최대 높이 설정 (원하는 높이로 조정 가능)
+                    overflowY: "auto", // 세로 방향 스크롤
                   }}
                 >
-                  <Typography id="modal-eventTitle" sx={{ fontWeight: 600 }}>
-                    {selectedEvent ? selectedEvent.eventTitle : ""}
-                  </Typography>
+                  {selectedEvent ? selectedEvent.description : ""}
+                </Typography>
 
-                  <Typography
-                    id="modal-courseTitle"
-                    sx={{
-                      fontSize: "12px",
-                      color: "darkgray",
-                    }}
-                  >
-                    {selectedEvent ? selectedEvent.courseTitle : ""}
-                  </Typography>
-                </Box>
-                <Box
-                  sx={{ display: "flex", gap: "4px" }}
-                  className="calendarModalDate"
-                >
-                  <Typography>
-                    {" "}
-                    {selectedEvent
-                      ? moment(selectedEvent.start).format(
-                          "YYYY년 MM월 DD일(ddd) HH:mm"
-                        )
-                      : ""}
-                  </Typography>
-                  <Typography sx={{ display: "inline", margin: "0px 2px" }}>
-                    ~
-                  </Typography>
-                  <Typography>
-                    {" "}
-                    {selectedEvent
-                      ? moment(selectedEvent.end).format(
-                          "YYYY년 MM월 DD일(ddd) HH:mm"
-                        )
-                      : ""}
-                  </Typography>
-                </Box>
-
-                <Box
-                  sx={{
-                    marginTop: 2,
-                    minHeight: "80px",
-                  }}
-                >
-                  <Typography
-                    id="modal-description"
-                    style={{
-                      fontSize: "14px",
-                      whiteSpace: "pre-wrap", // 연속된 띄어쓰기 및 줄바꿈 모두 허용
-                      overflow: "hidden", // 넘치는 내용 숨기기
-                      textOverflow: "ellipsis", // 넘치는 내용에 ... 표시
-                      display: "block", // 블록 요소로 설정
-                      maxHeight: "200px", // 최대 높이 설정 (원하는 높이로 조정 가능)
-                      overflowY: "auto", // 세로 방향 스크롤
-                    }}
-                  >
-                    {selectedEvent ? selectedEvent.description : ""}
-                  </Typography>
-                </Box>
+                <Typography>
+                  시작 시간:{" "}
+                  {selectedEvent
+                    ? moment(selectedEvent.start).format("YYYY.MM.DD HH:mm")
+                    : ""}
+                </Typography>
+                <Typography>
+                  종료 시간:{" "}
+                  {selectedEvent
+                    ? moment(selectedEvent.end).format("YYYY.MM.DD HH:mm")
+                    : ""}
+                </Typography>
 
                 {!readOnly && role === "ROLE_ADMIN" ? (
                   <div style={{ marginTop: "20px" }}>
@@ -496,7 +462,6 @@ const Calendars = ({ readOnly }) => {
                 )}
               </>
             )}
-
             <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
               {editMode && (
                 <Button
@@ -512,7 +477,7 @@ const Calendars = ({ readOnly }) => {
               </Button>
             </Box>
           </div>
-        </CustomModal>
+        </Modal>
       </div>
     </LocalizationProvider>
   );

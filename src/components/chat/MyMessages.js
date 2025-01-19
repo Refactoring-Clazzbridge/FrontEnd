@@ -4,11 +4,12 @@ import Sheet from '@mui/joy/Sheet';
 import MessagesPane from './MessagesPane';
 import ChatsPane from './ChatsPane';
 import { ChatProps } from '../../models/chat';
-import socket from '../../utils/socket';
+import {useSelector} from "react-redux";
 
-export default function MyProfile() {
+export default function MyMessages() {
   const [selectedChat, setSelectedChat] = React.useState(null); // 초기 값 null
   const [chats, setChats] = React.useState([]);
+  const socket = useSelector((state) => state.socket.socket);
 
   React.useEffect(() => {
 
@@ -25,7 +26,7 @@ export default function MyProfile() {
       console.error(errorMessage);
     });
 
-  }, [socket]);
+  }, []);
 
 
   return (

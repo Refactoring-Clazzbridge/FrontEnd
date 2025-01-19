@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { DataGrid } from "@mui/x-data-grid";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import PostAddIcon from "@mui/icons-material/PostAdd";
 import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
@@ -14,8 +15,6 @@ import {
   Snackbar,
   Alert,
 } from "@mui/material";
-import SearchIcon from "@mui/icons-material/Search";
-import InputAdornment from "@mui/material/InputAdornment";
 import Tooltip from "@mui/material/Tooltip";
 import CustomModal from "../../components/common/CustomModal";
 import { getUserCourseNotifications } from "../../services/apis/post/get";
@@ -24,7 +23,6 @@ import { deletePost as deletePostApi } from "../../services/apis/post/delete";
 import { updatePost } from "../../services/apis/post/put";
 import { getBoardType } from "../../services/apis/boardType/get";
 import PostComment from "../../components/comment/PostComment";
-import "../../styles/post.css";
 
 const columns = [
   { field: "id", headerName: "No", flex: 0.5, resizable: false },
@@ -33,23 +31,6 @@ const columns = [
     flex: 1,
     headerName: "카테고리",
     resizable: false,
-    renderCell: (params) => (
-      <Box
-        sx={{
-          backgroundColor: !params.row.courseId ? "#E3EFFB" : "transparent",
-          borderRadius: "20px", // 둥근 모서리
-          position: !params.row.courseId ? "relative" : "",
-          padding: !params.row.courseId ? "4px 8px" : "0px",
-          right: !params.row.courseId ? "8px" : "",
-          fontWeight: !params.row.courseId ? "500" : "normal", // 글씨체 조정
-          color: !params.row.courseId ? "#12467B" : "balck",
-          fontSize: "inherit", // 부모 요소의 글자 크기를 상속받음
-          display: "inline",
-        }}
-      >
-        {params.row.courseId ? params.value : "전체공지"}
-      </Box>
-    ),
   },
   {
     field: "title",
@@ -73,8 +54,7 @@ const columns = [
 
 export default function NoticeBoard() {
   const [currentUser, setCurrentUser] = useState(null);
-  const [originalRows, setOriginalRows] = useState([]); // 원본 데이터 보존
-  const [filteredRows, setFilteredRows] = useState([]); // 필터링된 데이터
+  const [rows, setRows] = useState([]); // 상태 추가
   const [openDrawer, setOpenDrawer] = useState(false); // Drawer 열기 상태
   const [selectedRow, setSelectedRow] = useState(null); // 선택된 행 데이터
   const [openSuccessSnackbar, setOpenSuccessSnackbar] = useState(false); // Snackbar 열기 상태
@@ -86,54 +66,16 @@ export default function NoticeBoard() {
   const [boardTypes, setBoardTypes] = useState([]); // 카테고리 상태
   const [boardId, setBoardId] = useState(""); // 선택된 카테고리 ID 상태
 
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300); // 300ms 디바운스
-
-    return () => clearTimeout(timer);
-  }, [search]);
-
-  useEffect(() => {
-    if (!debouncedSearch.trim()) {
-      setFilteredRows(originalRows);
-      return;
-    }
-    const normalizedSearch = debouncedSearch.replace(/\s+/g, "").toLowerCase();
-
-    const filtered = originalRows.filter((row) => {
-      // 각 필드값을 문자열로 변환하고 공백을 제거한 후 검색
-      return Object.values(row).some((field) => {
-        // null이나 undefined 체크
-        if (field == null) return false;
-
-        const normalizedField = String(field).replace(/\s+/g, "").toLowerCase();
-        return normalizedField.includes(normalizedSearch);
-      });
-    });
-
-    setFilteredRows(filtered);
-  }, [debouncedSearch, originalRows]);
-
-  // 검색 처리 함수
-  const handleSearch = (event) => {
-    setSearch(event.target.value);
-  };
-
   const fetchData = useCallback(async () => {
     const data = await getUserCourseNotifications(); // API 호출
-    console.log(data, "data");
-    setOriginalRows(data); // 원본 데이터 저장
-    setFilteredRows(data); // 필터링된 데이터 초기화
+    setRows(data); // 상태 업데이트
   }, []);
 
   const fetchBoardTypes = useCallback(async () => {
     try {
       const data = await getBoardType(); // API 호출
       setBoardTypes(data); // 카테고리 데이터 상태에 저장
+      console.log(data);
     } catch (error) {
       console.error("Failed to fetch board types:", error);
     }
@@ -228,7 +170,7 @@ export default function NoticeBoard() {
   const postSave = async () => {
     try {
       await savePost(postForm);
-
+      console.log(postForm, "=======================================");
       setSuccessMessage("게시물이 성공적으로 저장되었습니다."); // 메시지 설정
       setOpenSuccessSnackbar(true); // Snackbar 열기
       await fetchData(); // 데이터 새로 고침
@@ -286,6 +228,9 @@ export default function NoticeBoard() {
   const handleRowClick = (params) => {
     setSelectedRow(params.row); // 클릭된 행 데이터 저장
     setOpenDrawer(true); // Drawer 열기
+
+    console.log(currentUser.member.id, "currentUserId");
+    console.log(params.row, "selectdRow");
   };
 
   const handleCloseDrawer = () => {
@@ -306,29 +251,13 @@ export default function NoticeBoard() {
       <Box
         sx={{
           display: "flex",
-          justifyContent: "space-between",
+          justifyContent: "flex-end",
           width: "100%",
           height: "40px",
           gap: "12px",
           marginBottom: 2,
         }}
       >
-        <TextField
-          className="searchBar"
-          size="small"
-          placeholder="검색어를 입력하세요..."
-          value={search}
-          onChange={handleSearch}
-          sx={{ width: "300px" }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-
         {currentUser?.member?.memberType === "ROLE_ADMIN" && (
           <Tooltip title="삭제하기">
             <Button
@@ -593,10 +522,7 @@ export default function NoticeBoard() {
               border: "none",
             },
           }}
-          rows={filteredRows}
-          getRowClassName={(params) =>
-            params.row.courseId ? "" : "allNoticePost"
-          }
+          rows={rows}
           checkboxSelection={currentUser?.member?.memberType === "ROLE_ADMIN"}
           onRowClick={handleRowClick}
           localeText={{

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import AssignmentItem from "../../components/assignment/AssignmentItem";
 import { getStudentCourseId } from "../../services/apis/studentCourse/get";
-import { Button, Tooltip, Box, TextField, Tabs, Tab } from "@mui/material";
+import { Button, Tooltip, Box, TextField } from "@mui/material";
 import CustomModal from "../../components/common/CustomModal";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { getAssignmentsByCourseId } from "../../services/apis/assignment/get";
@@ -33,13 +33,6 @@ export default function AssignmentAccordion() {
   const [snackbarSeverity, setSnackbarSeverity] = useState("success"); // 스낵바 성공/실패 유무
 
   const [assignments, setAssignments] = useState([]); // assignments 상태 추가
-
-  const [selectedTab, setSelectedTab] = useState("all"); // 탭 상태 추가
-
-  // 탭 변경 핸들러
-  const handleTabChange = (event, newValue) => {
-    setSelectedTab(newValue);
-  };
 
   const modules = {
     toolbar: {
@@ -193,41 +186,6 @@ export default function AssignmentAccordion() {
             </Tooltip>
           </Box>
         )}
-
-      <Box sx={{ marginBottom: "16px" }}>
-        {/* 내비바 시작 */}
-        <Tabs
-          value={selectedTab}
-          onChange={handleTabChange}
-          variant="scrollable"
-          scrollButtons="auto"
-          sx={{
-            "& .MuiTab-root": {
-              textTransform: "none",
-              minWidth: "auto",
-              padding: "8px 16px",
-              fontSize: "14px",
-              // fontWeight: selectedTab === "all" ? "bold" : "normal",
-              color: "#666",
-              "&.Mui-selected": {
-                color: "#34495e",
-                fontWeight: "bold",
-              },
-            },
-            "& .MuiTabs-indicator": {
-              backgroundColor: "#34495e",
-            },
-          }}
-        >
-          <Tab label="전체" value="all" />
-          <Tab label="진행 중" value="웅" />
-          <Tab label="마감 완료" value="웅냥" />
-          {/* {courseTitle.map((type) => (
-          <Tab key={type.id} label={type.type} value={type.type} />
-        ))} */}
-        </Tabs>
-        {/* 내비바 끝 */}
-      </Box>
 
       <AssignmentItem
         currentUser={currentUser}

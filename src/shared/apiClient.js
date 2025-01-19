@@ -2,7 +2,8 @@ import axios from "axios";
 
 // Axios 인스턴스 생성
 const apiClient = axios.create({
-  baseURL: "http://175.106.99.175:8080/api/", // 기본 URL 추가
+  baseURL:
+    process.env.REACT_APP_API_URL, // 기본 URL 추가
 });
 
 // 요청 인터셉터 설정: 모든 요청에 Authorization 헤더를 자동으로 추가
@@ -16,7 +17,7 @@ apiClient.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error); // 요청 에러 처리
-  }
+  },
 );
 
 // 생성한 인스턴스 사용

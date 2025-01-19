@@ -1,27 +1,33 @@
 import { defineConfig } from "eslint-define-config";
+import eslintPluginReact from "eslint-plugin-react";
+import babelParser from "@babel/eslint-parser";
 
-export default defineConfig({
-  env: {
-    browser: true,
-    es2021: true,
-  },
-  extends: [
-    "eslint:recommended",
-    "plugin:react/recommended",
-    "google", // Google 스타일 가이드 적용
-    "prettier", // Prettier와 ESLint 충돌 방지
-  ],
-  parserOptions: {
-    ecmaVersion: "latest",
-    sourceType: "module",
-    ecmaFeatures: {
-      jsx: true,
+export default defineConfig([
+  {
+    files: ["**/*.js", "**/*.jsx"],
+    languageOptions: {
+      parser: babelParser,  // import로 불러온 babelParser 사용
+      ecmaVersion: "latest",
+      sourceType: "module",
+      parserOptions: {
+        requireConfigFile: false,
+        babelOptions: {
+          presets: ["@babel/preset-react"], // JSX를 지원하기 위한 설정
+        },
+      },
+    },
+    plugins: {
+      react: eslintPluginReact,
+    },
+    settings: {
+      react: {
+        version: "detect",
+      },
+    },
+    rules: {
+      "no-var": "error",
+      "react/jsx-filename-extension": [1, { extensions: [".js", ".jsx"] }],
+      "react/prop-types": "off",
     },
   },
-  plugins: ["react", "prettier"],
-  rules: {
-    "prettier/prettier": "error", // Prettier 오류를 ESLint로 처리
-    "no-var": "error", // var 사용 금지
-    "react/jsx-filename-extension": [1, { extensions: [".js", ".jsx"] }], // JSX 파일 확장자 설정
-  },
-});
+]);

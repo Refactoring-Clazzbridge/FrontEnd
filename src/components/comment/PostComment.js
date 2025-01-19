@@ -16,7 +16,6 @@ export default function PostComment({ postId }) {
   const [editCommentId, setEditCommentId] = useState(null); // 수정할 댓글 ID
   const [editContent, setEditContent] = useState(""); // 수정할 댓글 내용
   const textFieldRef = useRef(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [openSnackbar, setOpenSnackbar] = useState(false); // 스낵바 열기 상태
   const [snackbarMessage, setSnackbarMessage] = useState(""); // 스낵바 메시지
@@ -80,8 +79,6 @@ export default function PostComment({ postId }) {
       }
     } else {
       // 새 댓글 추가
-      if (isSubmitting) return; // 추가: 이미 제출 중이면 함수 종료
-      setIsSubmitting(true); // 추가: 제출 시작 시 상태 업데이트
       try {
         const commentRequestDTO = {
           content: newComment,
@@ -98,8 +95,6 @@ export default function PostComment({ postId }) {
         setSnackbarMessage("댓글 작성이 실패했습니다.");
         setSnackbarSeverity("error");
         setOpenSnackbar(true);
-      } finally {
-        setIsSubmitting(false);
       }
     }
   };
@@ -271,7 +266,7 @@ export default function PostComment({ postId }) {
         <Button
           variant="contained"
           onClick={handleCommentSubmit}
-          disabled={!newComment.trim() || isSubmitting}
+          disabled={!newComment.trim()}
           sx={{
             backgroundColor: "#34495e",
             maxHeight: "40px",

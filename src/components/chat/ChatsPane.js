@@ -11,10 +11,11 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import ChatListItem from './ChatListItem';
 import { toggleMessagesPane } from '../../utils/chat/utils';
-import socket from '../../utils/socket';
+import {useSelector} from "react-redux";
 
 const ChatsPane = ({ chats, setSelectedChat, selectedChatId }) => {
   const [users, setUsers] = useState([]);
+  const socket = useSelector((state) => state.socket.socket);
 
   useEffect(() => {
     // 서버에 courseId로 사용자 데이터 요청
@@ -29,7 +30,7 @@ const ChatsPane = ({ chats, setSelectedChat, selectedChatId }) => {
     return () => {
       socket.off('fetchedChatUserData');
     };
-  }, [socket]);
+  }, []);
 
   const [open, setOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState('');

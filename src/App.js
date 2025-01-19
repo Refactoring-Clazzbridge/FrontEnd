@@ -6,6 +6,11 @@ import Router from "./shared/Router";
 import { UserProvider } from "./context/UserContext";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { SocketProvider } from "./context/SocketContext";
+import {LoginProvider, useLogin} from "./context/LoginContext";
+import {TokenProvider} from "./context/TokenContext";
+import {CustomLoginForm} from "./pages/login/CustomLoginForm";
+import {Provider} from "react-redux";
+import store from "./redux/store";
 
 const theme = createTheme({
   typography: {
@@ -14,23 +19,22 @@ const theme = createTheme({
 });
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  const handleLoginSuccess = () => {
-    setIsLoggedIn(true);
-  };
 
   return (
     <ThemeProvider theme={theme}>
-      <UserProvider>
-        <SidebarProvider>
-          {isLoggedIn ? (
-            <Router /> // 로그인 후 Router 화면
-          ) : (
-            <Login /> // Login 컴포넌트
-          )}
-        </SidebarProvider>
-      </UserProvider>
+      <Provider store={store}>
+        <UserProvider>
+          <SidebarProvider>
+            <LoginProvider>
+              <TokenProvider>
+                <SocketProvider>
+                  <Login/>
+                </SocketProvider>
+              </TokenProvider>
+            </LoginProvider>
+          </SidebarProvider>
+        </UserProvider>
+      </Provider>
     </ThemeProvider>
   );
 }

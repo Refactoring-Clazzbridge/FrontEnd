@@ -6,12 +6,13 @@ import AvatarWithStatus from './AvatarWithStatus';
 import ChatBubble from './ChatBubble';
 import MessageInput from './MessageInput';
 import MessagesPaneHeader from './MessagesPaneHeader';
-import socket from '../../utils/socket';
+import {useSelector} from "react-redux";
 
 export default function MessagesPane(props) {
   const { chat } = props;
   const [chatMessages, setChatMessages] = useState(chat.messages);
   const [textAreaValue, setTextAreaValue] = useState('');
+  const socket = useSelector((state) => state.socket.socket);
 
   useEffect(() => {
     setChatMessages(chat.messages);

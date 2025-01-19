@@ -27,8 +27,9 @@ import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
 import Stack from "@mui/material/Stack";
 import Tooltip, { tooltipClasses } from "@mui/material/Tooltip";
 import { GitHub } from "@mui/icons-material";
-import { UserContext } from "../../context/UserContext";
-import apiClient from "../../shared/apiClient"; // default로 가져오기
+import {useUser} from "../../context/UserContext";
+import apiClient from "../../shared/apiClient";
+import {useLogin} from "../../context/LoginContext"; // default로 가져오기
 
 const drawerWidth = 240;
 const closedDrawerWidth = 64; // 슬라이드바가 닫혔을 때의 넓이
@@ -68,7 +69,8 @@ const CustomBadge = styled(Badge)({
 });
 
 const TopBar = ({ open }) => {
-  const { userInfo } = useContext(UserContext);
+  const { userInfo } = useUser();
+  const { handleLogoutSuccess } = useLogin()
   if (!userInfo == null) {
     console.log(userInfo.member.name);
   }
@@ -178,21 +180,9 @@ const TopBar = ({ open }) => {
       console.error("좌석 상태 업데이트 중 오류 발생:", error);
     }
 
-    // 좌석 정보를 localStorage에서 삭제
-    // localStorage.removeItem("userHasSeat");
+    // handleLogoutSuccess(); 진행
+    handleLogoutSuccess();
 
-    // 기존 로그아웃 프로세스 진행
-    localStorage.removeItem("token");
-    localStorage.removeItem("userInfo");
-    localStorage.removeItem("membertype");
-    localStorage.removeItem("userId");
-    Cookies.remove("refreshToken");
-    localStorage.removeItem("seatInfo");
-    console.log("토큰 제거 완료", localStorage.getItem("token"));
-
-
-    // 페이지를 새로 고치거나 로그인 화면으로 이동
-    window.location.reload();
   };
 
   const handleNotificationClick = () => {

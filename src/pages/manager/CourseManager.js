@@ -7,10 +7,8 @@ import { DataGrid } from '@mui/x-data-grid'; // DataGrid 임포트
 import { v4 as uuidv4 } from 'uuid'; // 고유한 ID를 생성하기 위해 uuid 패키지 사용
 import apiClient from '../../shared/apiClient';
 import CustomSnackbar from "../../components/common/CustomSnackbar"; // 커스텀 스낵바
-import CustomModal from "../../components/common/CustomModal"; // 커스텀 모달
 
 const CourseManager = () => {
-    const [openModal, setOpenModal] = useState(false);
     const [open, setOpen] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState(null);
@@ -186,39 +184,45 @@ const CourseManager = () => {
         }
     };
 
-    const handleDeleteConfirmation = () => {
-        const deletePromises = selectedCourses.map(id => {
-            console.log("Deleting course with ID:", id); // 삭제할 courseId 확인
-            return apiClient.delete(`course/${id}`);
-        });
-
-        Promise.all(deletePromises)
-            .then(() => {
-                const updatedEvents = events.filter(event => !selectedCourses.includes(event.id));
-                setEvents(updatedEvents);
-                setSelectedCourses([]); // 선택한 강의 목록 초기화
-                setSnackbarMessage(`${selectedCourses.length}개의 강의 삭제 성공`);
-                setSnackbarSeverity("success");
-                setOpenSnackbar(true);
-            })
-            .catch(error => {
-                console.error('강의 정보를 삭제하지 못했습니다.', error.response.data);
-                setSnackbarMessage('강의 삭제 실패: ' + error.response.data.message); // 서버에서 받은 오류 메시지를 출력
-                setSnackbarSeverity("error");
-                setOpenSnackbar(true);
-            });
-        setOpenModal(false); // 모달 닫기
-    };
-
     // 강의 삭제 핸들러
     const deleteSelectedCourse = () => {
-        if (selectedCourses.length === 0) {
+        // 선택된 강의 수를 확인
+        const courseCount = selectedCourses.length;
+
+        if (courseCount === 0) {
             setSnackbarMessage("삭제할 강의를 선택하세요.");
             setSnackbarSeverity("error"); // 실패 스낵바
             setOpenSnackbar(true);
             return;
         }
-        setOpenModal(true); // 모달 열기
+
+        const confirmation = window.confirm(`선택된 강의 ${courseCount}개를 삭제하시겠습니까?`); // window.confirm 팝업창
+
+        if (confirmation) {
+            const deletePromises = selectedCourses.map(id => {
+                console.log("Deleting course with ID:", id); // 삭제할 courseId 확인
+                return apiClient.delete(`course/${id}`);
+            });
+
+            Promise.all(deletePromises)
+                .then(() => {
+                    const updatedEvents = events.filter(event => !selectedCourses.includes(event.id));
+                    setEvents(updatedEvents);
+                    setSelectedCourses([]); // 선택한 강의 목록 초기화
+                    setSnackbarMessage(`${courseCount}개의 강의 삭제 성공`);
+                    setSnackbarSeverity("success");
+                    setOpenSnackbar(true);
+                })
+                .catch(error => {
+                    console.error('강의 정보를 삭제하지 못했습니다.', error.response.data);
+                    setSnackbarMessage('강의 삭제 실패: ' + error.response.data.message); // 서버에서 받은 오류 메시지를 출력
+                    setSnackbarSeverity("error");
+                    setOpenSnackbar(true);
+                });
+        } else {
+            // 사용자가 삭제를 취소했을 때의 처리
+            return;
+        }
     };
 
     // 강의 수정 핸들러
@@ -385,65 +389,9 @@ const CourseManager = () => {
                     <Button variant="outlined" onClick={editSelectedCourse} sx={{ mr: 2 }}>
                         강의 수정 및 조회
                     </Button>
-                    <div>
-                        <Button variant="outlined" onClick={deleteSelectedCourse} sx={{ mr: 2 }}>
-                            강의 삭제
-                        </Button>
-
-                        {/* Custom Modal */}
-                        <CustomModal isOpen={openModal} closeModal={() => setOpenModal(false)}>
-                            <Box
-                                sx={{
-                                    display: "flex",
-                                    margin: "auto",
-                                    width: "100%",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    flexDirection: "column",
-                                    gap: "10px",
-                                }}
-                            >
-                                <h3>강의 삭제</h3>
-                                <p>선택된 강의 {selectedCourses.length}개를 삭제하시겠습니까?</p>
-                                <Box
-                                    sx={{
-                                        display: "flex",
-                                        width: "100%",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        flexDirection: "row",
-                                        gap: "24px",
-                                        margin: "16px 0",
-                                    }}
-                                >
-                                    <Button
-                                        variant="outlined"
-                                        onClick={() => setOpenModal(false)}
-                                        sx={{
-                                            width: "120px",
-                                            height: "40px",
-                                            borderColor: "#34495e",
-                                            color: "#34495e",
-                                        }}
-                                    >
-                                        취소
-                                    </Button>
-                                    <Button
-                                        variant="contained"
-                                        onClick={handleDeleteConfirmation}
-                                        sx={{
-                                            width: "120px",
-                                            height: "40px",
-                                            backgroundColor: "#34495e",
-                                            fontWeight: 600,
-                                        }}
-                                    >
-                                        삭제
-                                    </Button>
-                                </Box>
-                            </Box>
-                        </CustomModal>
-                    </div>
+                    <Button variant="outlined" onClick={deleteSelectedCourse}>
+                        강의 삭제
+                    </Button>
                 </Box>
 
                 {/* 모달 */}
